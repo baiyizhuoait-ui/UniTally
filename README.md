@@ -1,73 +1,60 @@
-# Welcome to your Lovable project
+# UniTally
 
-## Project info
+An Accounting book application which supports more than one currency.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Features
 
-## How can I edit this code?
+- **Multi-currency Support**: Track expenses in multiple currencies with real-time exchange rates
+- **Wallet Management**: Create and manage multiple wallets with custom icons and colors
+- **Transaction Tracking**: Record income and expenses with categories and notes
+- **Budget Center**: Set budgets and track subscription services
+- **Expense Calendar**: Visualize daily spending patterns
+- **Data Dashboard**: View asset trends and category distributions
+- **Multi-language**: Support for Chinese and English
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn-ui + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Auth**: Firebase Authentication + Email verification
+- **Email**: Brevo SMTP
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+
+- npm or bun
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```bash
+# Clone the repository
+git clone https://github.com/baiyizhuoait-ui/UniTally.git
 
-Follow these steps:
+# Navigate to project directory
+cd UniTally
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install frontend dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install backend dependencies
+cd backend && npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Start backend server
+npm start
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+# In another terminal, start frontend
+cd .. && npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Configuration
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+1. Copy `.env.example` to `.env` and fill in your credentials
+2. Configure Firebase credentials for authentication
+3. Set up Brevo SMTP for email verification
 
-**Use GitHub Codespaces**
+## License
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+MIT
