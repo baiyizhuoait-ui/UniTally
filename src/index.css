@@ -1,0 +1,684 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+    --radius: 1rem;
+
+    --income: 142 71% 45%;
+    --expense: 0 84% 60%;
+
+    --sidebar-background: 210 40% 96%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 32% 91%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 217 33% 17%;
+    --card-foreground: 210 40% 98%;
+    --popover: 217 33% 17%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217 33% 22%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 217 91% 60%;
+
+    --income: 142 71% 45%;
+    --expense: 0 84% 60%;
+
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 217 33% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217 33% 22%;
+    --sidebar-ring: 217 91% 60%;
+  }
+
+  :root[data-theme-color="rose"] {
+    --primary: 346 77% 50%;
+    --accent: 346 77% 55%;
+    --ring: 346 77% 50%;
+    --sidebar-primary: 346 77% 50%;
+    --sidebar-ring: 346 77% 50%;
+  }
+
+  .dark[data-theme-color="rose"] {
+    --background: 346 30% 10%;
+    --card: 346 25% 14%;
+    --secondary: 346 25% 14%;
+    --muted: 346 20% 18%;
+    --border: 346 20% 18%;
+    --input: 346 20% 18%;
+    --primary: 346 77% 60%;
+    --accent: 346 77% 65%;
+    --ring: 346 77% 60%;
+    --sidebar-background: 346 30% 8%;
+    --sidebar-primary: 346 77% 60%;
+    --sidebar-ring: 346 77% 60%;
+  }
+
+  :root[data-theme-color="green"] {
+    --primary: 160 84% 39%;
+    --accent: 160 84% 44%;
+    --ring: 160 84% 39%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-ring: 160 84% 39%;
+  }
+
+  .dark[data-theme-color="green"] {
+    --background: 160 30% 8%;
+    --card: 160 25% 12%;
+    --secondary: 160 25% 12%;
+    --muted: 160 20% 16%;
+    --border: 160 20% 16%;
+    --input: 160 20% 16%;
+    --primary: 160 84% 45%;
+    --accent: 160 84% 50%;
+    --ring: 160 84% 45%;
+    --sidebar-background: 160 30% 6%;
+    --sidebar-primary: 160 84% 45%;
+    --sidebar-ring: 160 84% 45%;
+  }
+
+  :root[data-theme-color="violet"] {
+    --primary: 263 70% 50%;
+    --accent: 263 70% 55%;
+    --ring: 263 70% 50%;
+    --sidebar-primary: 263 70% 50%;
+    --sidebar-ring: 263 70% 50%;
+  }
+
+  .dark[data-theme-color="violet"] {
+    --background: 263 35% 12%;
+    --card: 263 30% 16%;
+    --secondary: 263 30% 16%;
+    --muted: 263 25% 20%;
+    --border: 263 25% 20%;
+    --input: 263 25% 20%;
+    --primary: 263 70% 60%;
+    --accent: 263 70% 65%;
+    --ring: 263 70% 60%;
+    --sidebar-background: 263 35% 10%;
+    --sidebar-primary: 263 70% 60%;
+    --sidebar-ring: 263 70% 60%;
+  }
+
+  :root[data-theme-color="amber"] {
+    --primary: 38 92% 50%;
+    --accent: 38 92% 55%;
+    --ring: 38 92% 50%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-ring: 38 92% 50%;
+  }
+
+  .dark[data-theme-color="amber"] {
+    --background: 38 30% 10%;
+    --card: 38 25% 14%;
+    --secondary: 38 25% 14%;
+    --muted: 38 20% 18%;
+    --border: 38 20% 18%;
+    --input: 38 20% 18%;
+    --primary: 38 92% 55%;
+    --accent: 38 92% 60%;
+    --ring: 38 92% 55%;
+    --sidebar-background: 38 30% 8%;
+    --sidebar-primary: 38 92% 55%;
+    --sidebar-ring: 38 92% 55%;
+  }
+
+  :root[data-theme-color="teal"] {
+    --primary: 183 74% 40%;
+    --accent: 183 74% 45%;
+    --ring: 183 74% 40%;
+    --sidebar-primary: 183 74% 40%;
+    --sidebar-ring: 183 74% 40%;
+  }
+
+  .dark[data-theme-color="teal"] {
+    --background: 183 30% 8%;
+    --card: 183 25% 12%;
+    --secondary: 183 25% 12%;
+    --muted: 183 20% 16%;
+    --border: 183 20% 16%;
+    --input: 183 20% 16%;
+    --primary: 183 74% 50%;
+    --accent: 183 74% 55%;
+    --ring: 183 74% 50%;
+    --sidebar-background: 183 30% 6%;
+    --sidebar-primary: 183 74% 50%;
+    --sidebar-ring: 183 74% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl border;
+    background: hsl(var(--card) / 0.7);
+    border-color: hsl(0 0% 100% / 0.15);
+  }
+  .dark .glass {
+    background: hsl(var(--card) / 0.6);
+    border-color: hsl(0 0% 100% / 0.08);
+  }
+
+  .glass-card {
+    @apply glass rounded-3xl p-5 shadow-lg;
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  .glass-card-hover:hover {
+    @apply shadow-xl scale-[1.02];
+  }
+
+  .accent-glow {
+    box-shadow: 0 8px 32px -8px hsl(var(--primary) / 0.4);
+  }
+
+  .accent-glow-lg {
+    box-shadow: 0 12px 48px -12px hsl(var(--primary) / 0.5);
+  }
+
+  .gradient-primary {
+    background: hsl(var(--primary));
+  }
+
+  .gradient-dark {
+    background: linear-gradient(135deg, hsl(222 47% 11%), hsl(217 33% 17%), hsl(215 28% 22%));
+  }
+
+  .text-income {
+    color: hsl(var(--income));
+  }
+  .text-expense {
+    color: hsl(var(--expense));
+  }
+
+  .modal-overlay {
+    animation: overlay-in 0.2s ease-out;
+  }
+  .modal-content {
+    animation: modal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .modal-content-out {
+    animation: modal-out 0.2s ease-in forwards;
+  }
+
+  .bottom-sheet {
+    animation: sheet-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .fab-button {
+    @apply fixed z-40 flex items-center justify-center rounded-full cursor-pointer transition-all duration-200;
+    background: hsl(var(--primary));
+    box-shadow: 0 8px 32px -4px hsl(var(--primary) / 0.5);
+  }
+
+  .fab-button:hover {
+    box-shadow: 0 12px 40px -4px hsl(var(--primary) / 0.6);
+    transform: scale(1.08);
+  }
+
+  .fab-button:active {
+    transform: scale(0.95);
+  }
+
+  .nav-add-button {
+    @apply fixed z-40;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    box-shadow: 0 8px 32px -4px hsl(var(--primary) / 0.5);
+    margin-top: -20px;
+    transition: transform 0.15s ease;
+  }
+
+  .nav-add-button:active {
+    transform: scale(0.95);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .nav-add-button:hover {
+      box-shadow: 0 12px 40px -4px hsl(var(--primary) / 0.6);
+      transform: scale(1.05);
+    }
+  }
+
+  .tab-active {
+    @apply text-primary font-semibold;
+  }
+
+  .category-icon-btn {
+    @apply flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all duration-200 cursor-pointer;
+    background: hsl(var(--secondary));
+  }
+  .category-icon-btn:hover {
+    background: hsl(var(--muted));
+  }
+  .category-icon-btn.selected {
+    @apply ring-2 ring-primary;
+    background: hsl(var(--primary) / 0.1);
+  }
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(24px) scale(0.96);
+  }
+}
+
+@keyframes sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+:root[data-ui-style="neumorphism"] {
+  --neu-bg: 220 15% 92%;
+  --neu-shadow-light: 0 0% 100%;
+  --neu-shadow-dark: 223 10% 80%;
+  --neu-accent: 221 83% 53%;
+  
+  --background: 220 15% 92%;
+  --foreground: 220 20% 20%;
+  --card: 220 15% 92%;
+  --card-foreground: 220 20% 20%;
+  --secondary: 220 15% 92%;
+  --muted: 220 12% 85%;
+  --border: 220 12% 85%;
+  
+  --radius: 1.5rem;
+}
+
+.dark[data-ui-style="neumorphism"] {
+  --neu-bg: 220 15% 15%;
+  --neu-shadow-light: 220 15% 22%;
+  --neu-shadow-dark: 220 15% 8%;
+  --neu-accent: 217 91% 60%;
+  
+  --background: 220 15% 15%;
+  --foreground: 220 10% 90%;
+  --card: 220 15% 15%;
+  --card-foreground: 220 10% 90%;
+  --secondary: 220 15% 15%;
+  --muted: 220 12% 20%;
+  --border: 220 12% 20%;
+}
+
+[data-ui-style="neumorphism"] .glass {
+  background: hsl(var(--neu-bg));
+  border: none;
+  backdrop-filter: none;
+}
+
+[data-ui-style="neumorphism"] .glass-card {
+  background: hsl(var(--neu-bg));
+  border: none;
+  backdrop-filter: none;
+  border-radius: 1.5rem;
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light));
+  transition: all 0.3s ease;
+}
+
+[data-ui-style="neumorphism"] .glass-card:hover {
+  box-shadow: 
+    10px 10px 20px hsl(var(--neu-shadow-dark)),
+    -10px -10px 20px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .glass-card:active,
+[data-ui-style="neumorphism"] .glass-card.pressed {
+  box-shadow: 
+    inset 4px 4px 8px hsl(var(--neu-shadow-dark)),
+    inset -4px -4px 8px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .neu-button {
+  background: hsl(var(--neu-bg));
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light));
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+[data-ui-style="neumorphism"] .neu-button:hover {
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .neu-button:active {
+  box-shadow: 
+    inset 4px 4px 8px hsl(var(--neu-shadow-dark)),
+    inset -4px -4px 8px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .neu-button-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  color: white;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light)),
+    0 4px 16px hsl(var(--primary) / 0.4);
+  transition: all 0.2s ease;
+  font-weight: 600;
+}
+
+[data-ui-style="neumorphism"] .neu-button-primary:hover {
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light)),
+    0 6px 20px hsl(var(--primary) / 0.5);
+  transform: translateY(-2px);
+}
+
+[data-ui-style="neumorphism"] .neu-button-primary:active {
+  transform: translateY(0);
+  box-shadow: 
+    4px 4px 8px hsl(var(--neu-shadow-dark)),
+    -4px -4px 8px hsl(var(--neu-shadow-light)),
+    0 2px 10px hsl(var(--primary) / 0.4);
+}
+
+[data-ui-style="neumorphism"] .neu-input {
+  background: hsl(var(--neu-bg));
+  border: none;
+  border-radius: 1rem;
+  padding: 0.75rem 1rem;
+  box-shadow: 
+    inset 4px 4px 8px hsl(var(--neu-shadow-dark)),
+    inset -4px -4px 8px hsl(var(--neu-shadow-light));
+  transition: all 0.2s ease;
+}
+
+[data-ui-style="neumorphism"] .neu-input:focus {
+  box-shadow: 
+    inset 4px 4px 8px hsl(var(--neu-shadow-dark)),
+    inset -4px -4px 8px hsl(var(--neu-shadow-light)),
+    0 0 0 3px hsl(var(--primary) / 0.2);
+}
+
+[data-ui-style="neumorphism"] .gradient-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light)),
+    0 4px 16px hsl(var(--primary) / 0.4);
+}
+
+[data-ui-style="neumorphism"] .nav-add-button {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light)),
+    0 4px 16px hsl(var(--primary) / 0.4);
+}
+
+[data-ui-style="neumorphism"] .nav-add-button:hover {
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light)),
+    0 6px 20px hsl(var(--primary) / 0.5);
+}
+
+[data-ui-style="neumorphism"] .fab-button {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light)),
+    0 4px 16px hsl(var(--primary) / 0.4);
+}
+
+[data-ui-style="neumorphism"] .category-icon-btn {
+  background: hsl(var(--neu-bg));
+  box-shadow: 
+    4px 4px 8px hsl(var(--neu-shadow-dark)),
+    -4px -4px 8px hsl(var(--neu-shadow-light));
+  border-radius: 1rem;
+}
+
+[data-ui-style="neumorphism"] .category-icon-btn:hover {
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .category-icon-btn.selected {
+  box-shadow: 
+    inset 3px 3px 6px hsl(var(--neu-shadow-dark)),
+    inset -3px -3px 6px hsl(var(--neu-shadow-light));
+  background: hsl(var(--neu-bg));
+}
+
+[data-ui-style="neumorphism"] button[class*="bg-secondary"] {
+  background: hsl(var(--neu-bg)) !important;
+  box-shadow: 
+    4px 4px 8px hsl(var(--neu-shadow-dark)),
+    -4px -4px 8px hsl(var(--neu-shadow-light));
+  border-radius: 0.75rem;
+}
+
+[data-ui-style="neumorphism"] input,
+[data-ui-style="neumorphism"] select,
+[data-ui-style="neumorphism"] textarea {
+  background: hsl(var(--neu-bg)) !important;
+  box-shadow: 
+    inset 3px 3px 6px hsl(var(--neu-shadow-dark)),
+    inset -3px -3px 6px hsl(var(--neu-shadow-light)) !important;
+  border: none !important;
+}
+
+[data-ui-style="neumorphism"] .modal-content {
+  background: hsl(var(--neu-bg));
+  box-shadow: 
+    12px 12px 24px hsl(var(--neu-shadow-dark)),
+    -12px -12px 24px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] .modal-content *:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+[data-ui-style="neumorphism"] .modal-content button:focus,
+[data-ui-style="neumorphism"] .modal-content input:focus,
+[data-ui-style="neumorphism"] .modal-content select:focus,
+[data-ui-style="neumorphism"] .modal-content textarea:focus {
+  outline: none !important;
+}
+
+[data-ui-style="neumorphism"] .glass-card:focus,
+[data-ui-style="neumorphism"] .glass-card:focus-within {
+  outline: none !important;
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light));
+}
+
+[data-ui-style="neumorphism"] *:focus {
+  outline: none !important;
+}
+
+[data-ui-style="neumorphism"] input:focus,
+[data-ui-style="neumorphism"] select:focus,
+[data-ui-style="neumorphism"] textarea:focus {
+  box-shadow: 
+    inset 3px 3px 6px hsl(var(--neu-shadow-dark)),
+    inset -3px -3px 6px hsl(var(--neu-shadow-light)) !important;
+}
+
+[data-ui-style="neumorphism"] button.nav-add-btn {
+  background: hsl(var(--primary)) !important;
+  box-shadow: 
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light)),
+    0 0 0 4px hsl(var(--neu-bg)),
+    4px 4px 8px hsl(var(--neu-shadow-dark)),
+    -4px -4px 8px hsl(var(--neu-shadow-light));
+  transition: all 0.2s ease;
+}
+
+[data-ui-style="neumorphism"] button.nav-add-btn:hover {
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light)),
+    0 0 0 4px hsl(var(--neu-bg)),
+    6px 6px 12px hsl(var(--neu-shadow-dark)),
+    -6px -6px 12px hsl(var(--neu-shadow-light));
+  transform: scale(1.05);
+}
+
+[data-ui-style="neumorphism"] button.nav-add-btn:active {
+  box-shadow: 
+    inset 2px 2px 4px hsl(var(--primary) / 0.3),
+    inset -2px -2px 4px hsl(var(--primary) / 0.3),
+    0 0 0 4px hsl(var(--neu-bg)),
+    2px 2px 4px hsl(var(--neu-shadow-dark)),
+    -2px -2px 4px hsl(var(--neu-shadow-light));
+  transform: scale(0.98);
+}
+
+[data-ui-style="neumorphism"] .ios-toggle {
+  position: relative;
+  width: 70px;
+  height: 31px;
+  background: hsl(var(--neu-bg));
+  box-shadow: 
+    inset 3px 3px 6px hsl(var(--neu-shadow-dark)),
+    inset -3px -3px 6px hsl(var(--neu-shadow-light));
+  border-radius: 31px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+[data-ui-style="neumorphism"] .ios-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 25px;
+  height: 25px;
+  background: hsl(var(--neu-bg));
+  box-shadow: 
+    3px 3px 6px hsl(var(--neu-shadow-dark)),
+    -3px -3px 6px hsl(var(--neu-shadow-light));
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+[data-ui-style="neumorphism"] .ios-toggle.active {
+  background: hsl(var(--primary) / 0.3);
+}
+
+[data-ui-style="neumorphism"] .ios-toggle.active::after {
+  left: 42px;
+  background: hsl(var(--primary));
+  box-shadow: 
+    2px 2px 4px hsl(var(--neu-shadow-dark)),
+    -2px -2px 4px hsl(var(--neu-shadow-light)),
+    0 0 10px hsl(var(--primary) / 0.5);
+}
