@@ -1,26 +1,69 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRates } from '@/lib/exchangeRates';
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { translations } from '@/lib/i18n';
+import { SUPPORTED_CURRENCIES } from '@/lib/currencies';
 
 type Period = '5d' | '1m' | '3m' | '1y' | '3y' | '10y';
 
 interface Props {
   compact?: boolean;
+  currencies?: string[];
+  fromCurrency?: string;
+  toCurrency?: string;
+  onFromChange?: (currency: string) => void;
+  onToChange?: (currency: string) => void;
 }
 
-export default function ExchangeRateChart({ compact = false }: Props) {
-  const { primaryCurrency, secondaryCurrency, latestRate, language } = useApp();
+export default function ExchangeRateChart({ 
+  compact = false, 
+  currencies: propCurrencies,
+  fromCurrency: propFromCurrency,
+  toCurrency: propToCurrency,
+  onFromChange,
+  onToChange 
+}: Props) {
+  const { primaryCurrency, secondaryCurrency, latestRate, language, refreshRates } = useApp();
   const t = translations[language];
   const [reversed, setReversed] = useState(false);
   const [period, setPeriod] = useState<Period>('1m');
   const [isLoading, setIsLoading] = useState(false);
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+  const [localFromCurrency, setLocalFromCurrency] = useState(propFromCurrency || primaryCurrency);
+  const [localToCurrency, setLocalToCurrency] = useState(propToCurrency || secondaryCurrency);
 
-  const fromCur = reversed ? secondaryCurrency : primaryCurrency;
-  const toCur = reversed ? primaryCurrency : secondaryCurrency;
-  const currentRate = reversed ? (latestRate ? 1 / latestRate : 1) : latestRate;
+  const currencies = propCurrencies || [primaryCurrency, secondaryCurrency];
+  const fromCur = reversed ? localToCurrency : localFromCurrency;
+  const toCur = reversed ? localFromCurrency : localToCurrency;
+
+  useEffect(() => {
+    if (propFromCurrency) setLocalFromCurrency(propFromCurrency);
+  }, [propFromCurrency]);
+
+  useEffect(() => {
+    if (propToCurrency) setLocalToCurrency(propToCurrency);
+  }, [propToCurrency]);
+
+  const getCurrencySymbol = (code: string) => {
+    return SUPPORTED_CURRENCIES.find(c => c.code === code)?.symbol || code;
+  };
+
+  const handleFromChange = (code: string) => {
+    setLocalFromCurrency(code);
+    setShowFromPicker(false);
+    if (onFromChange) onFromChange(code);
+    refreshRates(code, localToCurrency);
+  };
+
+  const handleToChange = (code: string) => {
+    setLocalToCurrency(code);
+    setShowToPicker(false);
+    if (onToChange) onToChange(code);
+    refreshRates(localFromCurrency, code);
+  };
 
   const getPeriodDays = (p: Period): number => {
     switch (p) {
@@ -36,13 +79,11 @@ export default function ExchangeRateChart({ compact = false }: Props) {
 
   useEffect(() => {
     const days = getPeriodDays(period);
-    if (days > 365) {
-      setIsLoading(true);
-      fetchHistoricalRates(primaryCurrency, secondaryCurrency, days).finally(() => {
-        setIsLoading(false);
-      });
-    }
-  }, [period, primaryCurrency, secondaryCurrency]);
+    setIsLoading(true);
+    fetchHistoricalRates(localFromCurrency, localToCurrency, days).finally(() => {
+      setIsLoading(false);
+    });
+  }, [period, localFromCurrency, localToCurrency]);
 
   const chartData = useMemo(() => {
     const dates = getCachedHistoricalDates();
@@ -59,12 +100,12 @@ export default function ExchangeRateChart({ compact = false }: Props) {
     return dates
       .filter(d => d >= cutoffStr)
       .map(d => {
-        let rate = getHistoricalRateForChart(primaryCurrency, secondaryCurrency, d);
+        let rate = getHistoricalRateForChart(localFromCurrency, localToCurrency, d);
         if (rate && reversed) rate = 1 / rate;
         return rate ? { date: d.slice(5), rate: parseFloat(rate.toFixed(4)) } : null;
       })
       .filter(Boolean) as { date: string; rate: number }[];
-  }, [period, reversed, primaryCurrency, secondaryCurrency]);
+  }, [period, reversed, localFromCurrency, localToCurrency]);
 
   const periods: { key: Period; label: string }[] = [
     { key: '5d', label: t.dashboard.periods['5d'] },
@@ -75,13 +116,82 @@ export default function ExchangeRateChart({ compact = false }: Props) {
     { key: '10y', label: t.dashboard.periods['10y'] },
   ];
 
+  const CurrencyPicker = ({ 
+    isOpen, 
+    onClose, 
+    onSelect, 
+    selected, 
+    exclude 
+  }: { 
+    isOpen: boolean; 
+    onClose: () => void; 
+    onSelect: (code: string) => void;
+    selected: string;
+    exclude?: string;
+  }) => {
+    if (!isOpen) return null;
+    
+    return (
+      <div className="absolute top-full left-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden min-w-[120px]">
+        {currencies
+          .filter(c => c !== exclude)
+          .map(code => (
+            <button
+              key={code}
+              onClick={() => {
+                onSelect(code);
+                onClose();
+              }}
+              className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center gap-2 ${
+                code === selected ? 'bg-primary/10 text-primary' : 'text-foreground'
+              }`}
+            >
+              <span className="font-medium">{code}</span>
+              <span className="text-muted-foreground text-xs">{getCurrencySymbol(code)}</span>
+            </button>
+          ))}
+      </div>
+    );
+  };
+
   return (
     <div className={compact ? '' : 'glass-card'}>
       {!compact && (
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="text-sm text-muted-foreground">{fromCur} → {toCur}</div>
-            <div className="text-2xl font-bold text-foreground">{currentRate.toFixed(4)}</div>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowFromPicker(!showFromPicker)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary hover:bg-muted transition-colors"
+              >
+                <span className="text-lg font-bold text-foreground">{fromCur}</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <CurrencyPicker
+                isOpen={showFromPicker}
+                onClose={() => setShowFromPicker(false)}
+                onSelect={handleFromChange}
+                selected={fromCur}
+                exclude={toCur}
+              />
+            </div>
+            <span className="text-muted-foreground">→</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowToPicker(!showToPicker)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-secondary hover:bg-muted transition-colors"
+              >
+                <span className="text-lg font-bold text-foreground">{toCur}</span>
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </button>
+              <CurrencyPicker
+                isOpen={showToPicker}
+                onClose={() => setShowToPicker(false)}
+                onSelect={handleToChange}
+                selected={toCur}
+                exclude={fromCur}
+              />
+            </div>
           </div>
           <button
             onClick={() => setReversed(!reversed)}
@@ -94,9 +204,43 @@ export default function ExchangeRateChart({ compact = false }: Props) {
 
       {compact && (
         <div className="flex items-center justify-between mb-3">
-          <div className="text-sm text-muted-foreground">{fromCur} → {toCur}</div>
+          <div className="flex items-center gap-1">
+            <div className="relative">
+              <button
+                onClick={() => setShowFromPicker(!showFromPicker)}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+              >
+                <span className="text-sm font-medium text-foreground">{fromCur}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              </button>
+              <CurrencyPicker
+                isOpen={showFromPicker}
+                onClose={() => setShowFromPicker(false)}
+                onSelect={handleFromChange}
+                selected={fromCur}
+                exclude={toCur}
+              />
+            </div>
+            <span className="text-muted-foreground text-xs">→</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowToPicker(!showToPicker)}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-secondary/50 hover:bg-secondary transition-colors"
+              >
+                <span className="text-sm font-medium text-foreground">{toCur}</span>
+                <ChevronDown className="w-3 h-3 text-muted-foreground" />
+              </button>
+              <CurrencyPicker
+                isOpen={showToPicker}
+                onClose={() => setShowToPicker(false)}
+                onSelect={handleToChange}
+                selected={toCur}
+                exclude={fromCur}
+              />
+            </div>
+          </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-foreground">{currentRate.toFixed(4)}</span>
+            <span className="text-lg font-bold text-foreground">{latestRate.toFixed(4)}</span>
             <button
               onClick={() => setReversed(!reversed)}
               className="p-1.5 rounded-xl bg-secondary hover:bg-muted transition-all text-foreground"
@@ -126,7 +270,7 @@ export default function ExchangeRateChart({ compact = false }: Props) {
           {language === 'zh' ? '正在加载数据...' : 'Loading data...'}
         </div>
       ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={compact ? 120 : 200}>
+        <ResponsiveContainer width="100%" height={compact ? 150 : 280}>
           <LineChart data={chartData}>
             <XAxis dataKey="date" tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis domain={['auto', 'auto']} tick={{ fontSize: 9 }} stroke="hsl(var(--muted-foreground))" />

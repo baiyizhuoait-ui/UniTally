@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
 import { getHistoricalRate } from '@/lib/exchangeRates';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import CategoryIcon from '@/components/CategoryIcon';
+import OptionPicker from '@/components/OptionPicker';
 import { translations } from '@/lib/i18n';
 
 function getDateFromDatetime(datetime: string): string {
@@ -12,15 +13,15 @@ function getDateFromDatetime(datetime: string): string {
 }
 
 export default function ExpenseCalendar() {
-  const { transactions, categories, wallets, platforms, primaryCurrency, secondaryCurrency, latestRate, language } = useApp();
+  const { transactions, categories, wallets, platforms, currencies, primaryCurrency, latestRate, language } = useApp();
   const t = translations[language];
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [chartCurrency, setChartCurrency] = useState(primaryCurrency);
   const [filterWallet, setFilterWallet] = useState('all');
   const [filterPlatform, setFilterPlatform] = useState('all');
-
-  const currencies = [primaryCurrency, secondaryCurrency];
+  const [showWalletPicker, setShowWalletPicker] = useState(false);
+  const [showPlatformPicker, setShowPlatformPicker] = useState(false);
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
@@ -28,9 +29,73 @@ export default function ExpenseCalendar() {
   const lastDay = new Date(year, month + 1, 0);
   const startDow = firstDay.getDay();
   const daysInMonth = lastDay.getDate();
+  const otherCurrencies = currencies.slice(1);
+
+  const CurrencySelector = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
+    const [showDropdown, setShowDropdown] = useState(false);
+    
+    if (currencies.length >= 3) {
+      return (
+        <div className="flex gap-1 relative">
+          <button
+            onClick={() => onChange(primaryCurrency)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              value === primaryCurrency ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {primaryCurrency}
+          </button>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1 ${
+              value !== primaryCurrency ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {value !== primaryCurrency ? value : (language === 'zh' ? '其他' : 'Other')}
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          {showDropdown && (
+            <div className="absolute top-full right-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden min-w-[80px]">
+              {otherCurrencies.map(code => (
+                <button
+                  key={code}
+                  onClick={() => {
+                    onChange(code);
+                    setShowDropdown(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center justify-between ${
+                    value === code ? 'bg-primary/10 text-primary' : 'text-foreground'
+                  }`}
+                >
+                  <span>{code}</span>
+                  {value === code && <Check className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex gap-1">
+        {currencies.map(c => (
+          <button
+            key={c}
+            onClick={() => onChange(c)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              value === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   const expenseTransactions = useMemo(() =>
-    transactions.filter(tx => tx.type === 'expense' && tx.category !== 'transfer'),
+    transactions.filter(tx => tx.type === 'expense' && tx.category !== 'transfer' && tx.type !== 'transfer'),
     [transactions]
   );
 
@@ -93,7 +158,7 @@ export default function ExpenseCalendar() {
 
   const categoryPieData = useMemo(() => {
     const filtered = transactions.filter(tx => {
-      if (tx.type === 'income' || tx.category === 'transfer') return false;
+      if (tx.type === 'income' || tx.type === 'transfer' || tx.category === 'transfer') return false;
       if (filterWallet !== 'all' && tx.walletId !== filterWallet) return false;
       if (filterPlatform !== 'all' && tx.platformId !== filterPlatform) return false;
       return true;
@@ -132,29 +197,20 @@ export default function ExpenseCalendar() {
         <h3 className="text-lg font-semibold text-foreground mb-4">{t.dashboard.totalExpenseByCategory}</h3>
 
         <div className="flex gap-3 mb-4">
-          <select
-            value={filterWallet}
-            onChange={e => setFilterWallet(e.target.value)}
-            className="bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none flex-1"
+          <button
+            onClick={() => setShowWalletPicker(true)}
+            className="bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none flex-1 flex items-center justify-between"
           >
-            <option value="all">{t.dashboard.allWallets}</option>
-            {wallets.map(w => (
-              <option key={w.id} value={w.id}>{w.name}</option>
-            ))}
-          </select>
-          <select
-            value={filterPlatform}
-            onChange={e => setFilterPlatform(e.target.value)}
-            className="bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none flex-1"
+            <span>{filterWallet === 'all' ? t.dashboard.allWallets : wallets.find(w => w.id === filterWallet)?.name}</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => setShowPlatformPicker(true)}
+            className="bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none flex-1 flex items-center justify-between"
           >
-            <option value="all">{t.dashboard.allPlatforms}</option>
-            {platforms.map(p => {
-              const translatedName = t.platforms[p.id as keyof typeof t.platforms] || p.name;
-              return (
-                <option key={p.id} value={p.id}>{translatedName}</option>
-              );
-            })}
-          </select>
+            <span>{filterPlatform === 'all' ? t.dashboard.allPlatforms : (t.platforms[filterPlatform as keyof typeof t.platforms] || platforms.find(p => p.id === filterPlatform)?.name)}</span>
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
         </div>
 
         {categoryPieData.length > 0 ? (
@@ -259,19 +315,7 @@ export default function ExpenseCalendar() {
         <div className="glass-card">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-foreground">{t.calendar.monthlyStats}</h3>
-            <div className="flex gap-1">
-              {currencies.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setChartCurrency(c)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                    chartCurrency === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                  }`}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
+            <CurrencySelector value={chartCurrency} onChange={setChartCurrency} />
           </div>
           {barData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -340,19 +384,7 @@ export default function ExpenseCalendar() {
           <div className="glass-card">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-foreground">{t.calendar.dailyFlow}</h3>
-              <div className="flex gap-1">
-                {currencies.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setChartCurrency(c)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
-                      chartCurrency === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              <CurrencySelector value={chartCurrency} onChange={setChartCurrency} />
             </div>
             {selectedDayTxs.length === 0 ? (
               <div className="text-center py-6 text-muted-foreground text-sm">{t.calendar.noExpenseDay}</div>
@@ -376,6 +408,30 @@ export default function ExpenseCalendar() {
           </div>
         </div>
       )}
+
+      <OptionPicker
+        open={showWalletPicker}
+        value={filterWallet}
+        onChange={setFilterWallet}
+        onClose={() => setShowWalletPicker(false)}
+        options={[
+          { id: 'all', name: t.dashboard.allWallets },
+          ...wallets.map(w => ({ id: w.id, name: w.name, color: w.color }))
+        ]}
+        title={language === 'zh' ? '选择钱包' : 'Select Wallet'}
+      />
+
+      <OptionPicker
+        open={showPlatformPicker}
+        value={filterPlatform}
+        onChange={setFilterPlatform}
+        onClose={() => setShowPlatformPicker(false)}
+        options={[
+          { id: 'all', name: t.dashboard.allPlatforms },
+          ...platforms.map(p => ({ id: p.id, name: t.platforms[p.id as keyof typeof t.platforms] || p.name, icon: p.icon }))
+        ]}
+        title={language === 'zh' ? '选择平台' : 'Select Platform'}
+      />
     </div>
   );
 }

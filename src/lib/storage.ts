@@ -6,8 +6,7 @@ const STORAGE_KEYS = {
   UI_STYLE: 'mcb_ui_style',
   LANGUAGE: 'mcb_language',
   SETUP_COMPLETED: 'mcb_setup_completed',
-  PRIMARY_CURRENCY: 'mcb_primary_currency',
-  SECONDARY_CURRENCY: 'mcb_secondary_currency',
+  CURRENCIES: 'mcb_currencies',
   EXCHANGE_RATES: 'mcb_exchange_rates',
 } as const;
 
@@ -58,5 +57,17 @@ export function clearUserData(userId: string) {
     localStorage.removeItem(getUserDataKey(userId, key));
   });
 }
+
+export const storage = {
+  get: <T>(key: string, fallback?: T): T => {
+    return loadFromStorage(key, fallback as T);
+  },
+  set: (key: string, value: unknown) => {
+    saveToStorage(key, value);
+  },
+  remove: (key: string) => {
+    localStorage.removeItem(key);
+  },
+};
 
 export { STORAGE_KEYS, USER_DATA_KEYS };

@@ -1,24 +1,35 @@
 export interface Transaction {
   id: string;
-  type: 'expense' | 'income';
+  type: 'expense' | 'income' | 'transfer';
   amount: number;
   currency: string;
   platformId: string;
   walletId: string;
   category: string;
-  datetime: string; // ISO datetime string YYYY-MM-DDTHH:mm
+  datetime: string;
   note: string;
   createdAt: number;
+  fromWalletId?: string;
+  toWalletId?: string;
+  fromAmount?: number;
+  toAmount?: number;
+  fromCurrency?: string;
+  toCurrency?: string;
 }
 
 export interface Wallet {
   id: string;
   name: string;
-  currency: string;
   color: string;
-  balance: number; // initial balance
+  icon: string;
+  currency: string;
+  balance: number;
+  type: 'cash' | 'savings' | 'credit' | 'ewallet';
+  creditLimit?: number;
+  isDefault?: boolean;
+  sortOrder?: number;
   order: number;
-  iconId?: number; // wallet icon id from walletIcons.ts
+  iconId?: number;
 }
 
 export interface Category {
@@ -83,7 +94,7 @@ export interface ExchangeRateCache {
 }
 
 export type ThemeMode = 'light' | 'dark';
-export type UIStyle = 'default' | 'neumorphism';
+export type UIStyle = 'default' | 'glassmorphism' | 'neumorphism' | 'brutalism' | 'memphis' | 'cyberpunk';
 
 export interface User {
   id: string;

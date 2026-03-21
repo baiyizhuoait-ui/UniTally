@@ -9,13 +9,19 @@ interface Option {
   color?: string;
 }
 
+interface OptionGroup {
+  label: string;
+  options: Option[];
+}
+
 interface Props {
   open: boolean;
   value: string;
   onChange: (value: string) => void;
   onClose: () => void;
-  options: Option[];
-  title: string;
+  options: Option[] | OptionGroup[];
+  title?: string;
+  grouped?: boolean;
 }
 
 const ITEM_HEIGHT = 40;
@@ -210,7 +216,7 @@ function WheelPicker({
   );
 }
 
-export default function OptionPicker({ open, value, onChange, onClose, options, title }: Props) {
+export default function OptionPicker({ open, value, onChange, onClose, options, title, grouped }: Props) {
   const { language } = useApp();
   const [tempValue, setTempValue] = useState(value);
 
@@ -225,9 +231,53 @@ export default function OptionPicker({ open, value, onChange, onClose, options, 
     onClose();
   };
 
+  const isGrouped = grouped || (options.length > 0 && 'options' in options[0] && !('id' in options[0]));
+
+  const flatOptions: Option[] = isGrouped
+    ? (options as OptionGroup[]).flatMap(g => g.options)
+    : (options as Option[]);
+
   if (!open) return null;
 
   const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+
+  const renderOption = (option: Option) => (
+    <button
+      key={option.id}
+      onClick={() => setTempValue(option.id)}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+        tempValue === option.id 
+          ? 'bg-primary text-primary-foreground' 
+          : 'bg-secondary text-foreground hover:bg-muted'
+      }`}
+    >
+      {option.icon && (
+        <span className="text-lg">{option.icon}</span>
+      )}
+      {option.color && !option.icon && (
+        <div 
+          className="w-3 h-3 rounded-full flex-shrink-0"
+          style={{ backgroundColor: option.color }}
+        />
+      )}
+      <span className="text-sm font-medium">{option.name}</span>
+    </button>
+  );
+
+  const renderGroupedOptions = () => (
+    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+      {(options as OptionGroup[]).map((group, idx) => (
+        <div key={idx}>
+          <div className="text-xs text-muted-foreground px-4 mb-2 font-medium">
+            {group.label}
+          </div>
+          <div className="space-y-2">
+            {group.options.map(option => renderOption(option))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" onClick={onClose}>
@@ -254,33 +304,16 @@ export default function OptionPicker({ open, value, onChange, onClose, options, 
 
         <div className="px-4 py-6">
           {isMobile ? (
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
-              {options.map(option => (
-                <button
-                  key={option.id}
-                  onClick={() => setTempValue(option.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    tempValue === option.id 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-secondary text-foreground hover:bg-muted'
-                  }`}
-                >
-                  {option.icon && (
-                    <span className="text-lg">{option.icon}</span>
-                  )}
-                  {option.color && !option.icon && (
-                    <div 
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: option.color }}
-                    />
-                  )}
-                  <span className="text-sm font-medium">{option.name}</span>
-                </button>
-              ))}
-            </div>
+            isGrouped ? (
+              renderGroupedOptions()
+            ) : (
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {(options as Option[]).map(option => renderOption(option))}
+              </div>
+            )
           ) : (
             <WheelPicker
-              options={options}
+              options={flatOptions}
               value={tempValue}
               onChange={setTempValue}
             />

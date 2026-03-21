@@ -5,6 +5,8 @@ import { DEFAULT_CATEGORIES, DEFAULT_PLATFORMS } from '@/lib/defaults';
 import { fetchLatestRate, fetchHistoricalRates } from '@/lib/exchangeRates';
 import { authService } from '@/lib/auth';
 import { translations, type Language } from '@/lib/i18n';
+import { useSubscription } from '@/contexts/SubscriptionContext';
+import { PLAN_FEATURES } from '@/lib/plans';
 
 interface AppContextType {
   user: User | null;
@@ -23,11 +25,13 @@ interface AppContextType {
   avatar: string | null;
   setupCompleted: boolean;
   bookName: string;
+  currencies: string[];
   primaryCurrency: string;
   secondaryCurrency: string;
   latestRate: number;
   rateLoading: boolean;
   t: typeof translations.zh;
+  isPremium: boolean;
 
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -70,9 +74,11 @@ interface AppContextType {
   setAvatar: (a: string | null) => void;
   setSetupCompleted: (v: boolean) => void;
   setBookName: (n: string) => void;
+  setCurrencies: (c: string[]) => void;
+  addCurrency: (c: string) => boolean;
+  removeCurrency: (c: string) => boolean;
   setPrimaryCurrency: (c: string) => void;
-  setSecondaryCurrency: (c: string) => void;
-  refreshRates: () => Promise<void>;
+  refreshRates: (from?: string, to?: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -88,6 +94,9 @@ function genId() {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
+  const subscription = useSubscription();
+  const isPremium = subscription.isPremium;
+  
   const [user, setUser] = useState<User | null>(() =>
     loadFromStorage(STORAGE_KEYS.USER, null)
   );
@@ -117,16 +126,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const [setupCompleted, setSetupCompletedState] = useState<boolean>(false);
   const [bookName, setBookNameState] = useState<string>('');
-  const [primaryCurrency, setPrimaryCurrencyState] = useState<string>(() =>
-    loadFromStorage(STORAGE_KEYS.PRIMARY_CURRENCY, 'CNY')
-  );
-  const [secondaryCurrency, setSecondaryCurrencyState] = useState<string>(() =>
-    loadFromStorage(STORAGE_KEYS.SECONDARY_CURRENCY, 'MYR')
+  const [currencies, setCurrenciesState] = useState<string[]>(() =>
+    loadFromStorage(STORAGE_KEYS.CURRENCIES, ['CNY', 'MYR'])
   );
   const [latestRate, setLatestRate] = useState(1);
   const [rateLoading, setRateLoading] = useState(false);
   
   const t = translations[language];
+
+  const primaryCurrency = currencies[0] || 'CNY';
+  const secondaryCurrency = currencies[1] || 'MYR';
+
+  const mergeWithDefaults = <T extends { id: string }>(existing: T[], defaults: T[]): T[] => {
+    const existingIds = new Set(existing.map(item => item.id));
+    const defaultIds = new Set(defaults.map(item => item.id));
+    
+    const merged = [...existing];
+    
+    for (const defaultItem of defaults) {
+      if (!existingIds.has(defaultItem.id)) {
+        merged.push(defaultItem);
+      }
+    }
+    
+    return merged.filter(item => defaultIds.has(item.id));
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -140,7 +164,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       
       setTransactions(userTransactions);
       setWallets(userWallets);
-      setCategories(userCategories);
+      
+      const mergedCategories = mergeWithDefaults(userCategories, DEFAULT_CATEGORIES);
+      setCategories(mergedCategories);
+      
       setPlatforms(userPlatforms);
       setAvatarState(userAvatar);
       setSetupCompletedState(userSetupCompleted);
@@ -194,8 +221,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveUserData(user.id, USER_DATA_KEYS.BOOK_NAME, bookName);
     }
   }, [bookName, user?.id]);
-  useEffect(() => { saveToStorage(STORAGE_KEYS.PRIMARY_CURRENCY, primaryCurrency); }, [primaryCurrency]);
-  useEffect(() => { saveToStorage(STORAGE_KEYS.SECONDARY_CURRENCY, secondaryCurrency); }, [secondaryCurrency]);
+  useEffect(() => { saveToStorage(STORAGE_KEYS.CURRENCIES, currencies); }, [currencies]);
 
   const [avatar, setAvatarState] = useState<string | null>(null);
   
@@ -246,12 +272,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = language;
   }, [language]);
 
-  const refreshRates = useCallback(async () => {
+  const refreshRates = useCallback(async (from?: string, to?: string) => {
+    const fromCurrency = from || primaryCurrency;
+    const toCurrency = to || secondaryCurrency;
+    if (fromCurrency === toCurrency) {
+      setLatestRate(1);
+      return;
+    }
     setRateLoading(true);
     try {
-      const rate = await fetchLatestRate(primaryCurrency, secondaryCurrency);
+      const rate = await fetchLatestRate(fromCurrency, toCurrency);
       setLatestRate(rate);
-      await fetchHistoricalRates(primaryCurrency, secondaryCurrency, 365);
+      await fetchHistoricalRates(fromCurrency, toCurrency, 365);
     } catch (error) {
       console.warn('Failed to refresh exchange rates:', error);
     }
@@ -380,11 +412,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setAvatar = useCallback((a: string | null) => setAvatarState(a), []);
   const setSetupCompleted = useCallback((v: boolean) => setSetupCompletedState(v), []);
   const setBookName = useCallback((n: string) => setBookNameState(n), []);
-  const setPrimaryCurrency = useCallback((c: string) => {
-    setPrimaryCurrencyState(c);
+  
+  const setCurrencies = useCallback((c: string[]) => {
+    setCurrenciesState(c);
   }, []);
-  const setSecondaryCurrency = useCallback((c: string) => {
-    setSecondaryCurrencyState(c);
+
+  const addCurrency = useCallback((c: string): boolean => {
+    if (currencies.includes(c)) return false;
+    setCurrenciesState(prev => [...prev, c]);
+    return true;
+  }, [currencies]);
+
+  const removeCurrency = useCallback((c: string): boolean => {
+    if (currencies.length <= 2) return false;
+    if (c === primaryCurrency) return false;
+    setCurrenciesState(prev => prev.filter(cur => cur !== c));
+    return true;
+  }, [currencies, primaryCurrency]);
+
+  const setPrimaryCurrency = useCallback((c: string) => {
+    setCurrenciesState(prev => {
+      const filtered = prev.filter(cur => cur !== c);
+      return [c, ...filtered];
+    });
   }, []);
 
   const resetCategories = useCallback(() => {
@@ -405,7 +455,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     <AppContext.Provider value={{
       user, isAuthenticated, authLoading,
       transactions, wallets, categories, platforms, budgets, subscriptions, theme, themeColor, uiStyle, language, avatar, setupCompleted, bookName,
-      primaryCurrency, secondaryCurrency, latestRate, rateLoading, t,
+      currencies, primaryCurrency, secondaryCurrency, latestRate, rateLoading, t,
+      isPremium,
       login, loginWithGoogle, register, logout,
       addTransaction, updateTransaction, deleteTransaction, clearTransactions,
       addWallet, updateWallet, deleteWallet, reorderWallets,
@@ -414,7 +465,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addBudget, updateBudget, deleteBudget,
       addSubscription, updateSubscription, deleteSubscription,
       setTheme, setThemeColor, setUIStyle, setLanguage, setAvatar, setSetupCompleted, setBookName,
-      setPrimaryCurrency, setSecondaryCurrency, refreshRates,
+      setCurrencies, addCurrency, removeCurrency, setPrimaryCurrency, refreshRates,
     }}>
       {children}
     </AppContext.Provider>

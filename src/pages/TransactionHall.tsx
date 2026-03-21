@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
-import { Trash2, X, ChevronDown, Wallet, CreditCard } from 'lucide-react';
+import { Trash2, X, ChevronDown, Wallet, CreditCard, ArrowRight } from 'lucide-react';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import CategoryIcon from '@/components/CategoryIcon';
 import { translations } from '@/lib/i18n';
 
-type Filter = 'all' | 'expense' | 'income';
+type Filter = 'all' | 'expense' | 'income' | 'transfer';
 
 function formatDateTimeDisplay(datetime: string, language: string): string {
   const date = new Date(datetime);
@@ -40,7 +40,17 @@ export default function TransactionHall() {
   const selectedPlatform = selectedPlatformId ? platforms.find(p => p.id === selectedPlatformId) : null;
 
   const filtered = transactions
-    .filter(t => filter === 'all' || t.type === filter)
+    .filter(t => {
+      if (filter === 'all') return true;
+      if (filter === 'transfer') return t.type === 'transfer';
+      return t.type === filter;
+    })
+    .filter(t => {
+      if (selectedCategoryId || selectedWalletId || selectedPlatformId) {
+        return t.type !== 'transfer';
+      }
+      return true;
+    })
     .filter(t => !selectedCategoryId || t.category === selectedCategoryId)
     .filter(t => !selectedWalletId || t.walletId === selectedWalletId)
     .filter(t => !selectedPlatformId || t.platformId === selectedPlatformId)
@@ -61,6 +71,7 @@ export default function TransactionHall() {
     { key: 'all', label: t.transactionHall.allRecords },
     { key: 'expense', label: t.transactionHall.expenseOnly },
     { key: 'income', label: t.transactionHall.incomeOnly },
+    { key: 'transfer', label: language === 'zh' ? '仅转账' : 'Transfers Only' },
   ];
 
   const formatDateHeader = (dateStr: string): string => {
@@ -284,6 +295,58 @@ export default function TransactionHall() {
           <div className="text-sm text-muted-foreground mb-2 px-1">{formatDateHeader(date)}</div>
           <div className="space-y-2">
             {txs.map(tx => {
+              if (tx.type === 'transfer') {
+                const fromWallet = wallets.find(w => w.id === tx.fromWalletId);
+                const toWallet = wallets.find(w => w.id === tx.toWalletId);
+                return (
+                  <div
+                    key={tx.id}
+                    className="glass-card-hover cursor-pointer relative group"
+                    onClick={() => setEditTx(tx)}
+                    onMouseEnter={() => setHoveredId(tx.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-primary/10">
+                        <ArrowRight className="w-5 h-5 text-primary" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-foreground">
+                            {language === 'zh' ? '转账' : 'Transfer'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                          <span>{fromWallet?.name}</span>
+                          <ArrowRight className="w-3 h-3" />
+                          <span>{toWallet?.name}</span>
+                          {tx.note && <span>· {tx.note}</span>}
+                        </div>
+                      </div>
+
+                      <div className="text-right flex-shrink-0">
+                        <div className="text-sm font-semibold text-primary">
+                          -{getCurrencySymbol(tx.fromCurrency || tx.currency)}{(tx.fromAmount || tx.amount).toFixed(2)}
+                        </div>
+                        <div className="text-xs text-income">
+                          +{getCurrencySymbol(tx.toCurrency || '')}{(tx.toAmount || 0).toFixed(2)}
+                        </div>
+                      </div>
+
+                      {hoveredId === tx.id && (
+                        <button
+                          onClick={e => { e.stopPropagation(); deleteTransaction(tx.id); }}
+                          className="absolute right-2 top-2 p-1.5 rounded-xl bg-expense/10 text-expense hover:bg-expense hover:text-primary-foreground transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
               const cat = getCategory(tx.category);
               const plat = getPlatform(tx.platformId);
               const wallet = getWallet(tx.walletId);

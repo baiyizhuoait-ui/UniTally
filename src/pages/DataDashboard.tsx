@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol, SUPPORTED_CURRENCIES } from '@/lib/currencies';
-import { Plus, Trash2, Calendar, Tag, DollarSign, FileText, Building2, Bell } from 'lucide-react';
+import { Plus, Trash2, Calendar, Tag, DollarSign, FileText, Building2, Bell, ChevronDown, Check } from 'lucide-react';
 import CategoryIcon from '@/components/CategoryIcon';
 import { getHistoricalRate } from '@/lib/exchangeRates';
 import DatePicker from '@/components/DatePicker';
@@ -17,7 +17,7 @@ function getDateFromDatetime(datetime: string): string {
 type Period = '3d' | '1w' | '1m' | '3m' | '6m' | '1y';
 
 export default function BudgetCenter() {
-  const { budgets, subscriptions, categories, transactions, primaryCurrency, secondaryCurrency, language, addBudget, updateBudget, deleteBudget, addSubscription, updateSubscription, deleteSubscription, t } = useApp();
+  const { budgets, subscriptions, categories, transactions, currencies, primaryCurrency, language, addBudget, updateBudget, deleteBudget, addSubscription, updateSubscription, deleteSubscription, t } = useApp();
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showAddSubscriptionModal, setShowAddSubscriptionModal] = useState(false);
   
@@ -66,6 +66,7 @@ export default function BudgetCenter() {
     setBudgetNotifyEnabled(false);
     setBudgetNotifyDays(3);
     setEditingBudget(null);
+    setShowBudgetCurrencyPicker(false);
   };
 
   const resetSubscriptionForm = () => {
@@ -82,6 +83,7 @@ export default function BudgetCenter() {
     setSubNotifyEnabled(false);
     setSubNotifyDays(3);
     setEditingSubscription(null);
+    setShowSubCurrencyPicker(false);
   };
 
   const openEditBudget = (budget: Budget) => {
@@ -290,7 +292,70 @@ export default function BudgetCenter() {
     { key: '1y', label: t.dashboard.period1y || '一年' },
   ];
 
-  const currencies = [primaryCurrency, secondaryCurrency];
+  const otherCurrencies = currencies.slice(1);
+  const [showBudgetCurrencyPicker, setShowBudgetCurrencyPicker] = useState(false);
+  const [showSubCurrencyPicker, setShowSubCurrencyPicker] = useState(false);
+
+  const CurrencySelector = ({ value, onChange, showPicker, setShowPicker }: { value: string; onChange: (v: string) => void; showPicker: boolean; setShowPicker: (v: boolean) => void }) => {
+    if (currencies.length >= 3) {
+      return (
+        <div className="flex gap-1 relative">
+          <button
+            onClick={() => onChange(primaryCurrency)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              value === primaryCurrency ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {primaryCurrency}
+          </button>
+          <button
+            onClick={() => setShowPicker(!showPicker)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1 ${
+              value !== primaryCurrency ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {value !== primaryCurrency ? value : (language === 'zh' ? '其他' : 'Other')}
+            <ChevronDown className="w-3 h-3" />
+          </button>
+          {showPicker && (
+            <div className="absolute top-full right-0 mt-1 z-50 bg-card border border-border rounded-xl shadow-lg overflow-hidden min-w-[100px]">
+              {otherCurrencies.map(code => (
+                <button
+                  key={code}
+                  onClick={() => {
+                    onChange(code);
+                    setShowPicker(false);
+                  }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors flex items-center justify-between ${
+                    value === code ? 'bg-primary/10 text-primary' : 'text-foreground'
+                  }`}
+                >
+                  <span>{code}</span>
+                  {value === code && <Check className="w-3 h-3" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex gap-1">
+        {currencies.map(c => (
+          <button
+            key={c}
+            onClick={() => onChange(c)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+              value === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+            }`}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -500,19 +565,12 @@ export default function BudgetCenter() {
           >
             <div className="flex items-center justify-between mb-4 pt-2">
               <h2 className="text-lg font-bold text-foreground">{editingBudget ? t.transaction.edit : t.dashboard.addBudget}</h2>
-              <div className="flex gap-1">
-                {currencies.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setBudgetCurrency(c)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      budgetCurrency === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              <CurrencySelector 
+                value={budgetCurrency}
+                onChange={setBudgetCurrency}
+                showPicker={showBudgetCurrencyPicker}
+                setShowPicker={setShowBudgetCurrencyPicker}
+              />
             </div>
 
             <div className="flex items-center justify-center gap-2 mb-4">
@@ -658,19 +716,12 @@ export default function BudgetCenter() {
           >
             <div className="flex items-center justify-between mb-4 pt-2">
               <h2 className="text-lg font-bold text-foreground">{editingSubscription ? t.transaction.edit : t.dashboard.subscription.addSubscription}</h2>
-              <div className="flex gap-1">
-                {currencies.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setSubCurrency(c)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
-                      subCurrency === c ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                    }`}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
+              <CurrencySelector 
+                value={subCurrency}
+                onChange={setSubCurrency}
+                showPicker={showSubCurrencyPicker}
+                setShowPicker={setShowSubCurrencyPicker}
+              />
             </div>
 
             <div className="flex items-center justify-center gap-2 mb-4">

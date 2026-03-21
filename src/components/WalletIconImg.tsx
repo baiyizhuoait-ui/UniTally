@@ -117,10 +117,6 @@ async function checkIconType(imageUrl: string): Promise<IconType> {
 function getIconSources(icon: WalletIcon): string[] {
   const sources: string[] = [];
   
-  if (icon.logoSvgl) {
-    sources.push(icon.logoSvgl);
-  }
-  
   if (icon.logoBrandfetch) {
     sources.push(icon.logoBrandfetch);
   }
@@ -133,6 +129,10 @@ function getIconSources(icon: WalletIcon): string[] {
     sources.push(`https://www.google.com/s2/favicons?domain=${icon.domain}&sz=64`);
     sources.push(`https://favicon.im/${icon.domain}?larger=true`);
     sources.push(`https://icons.duckduckgo.com/ip3/${icon.domain}.ico`);
+  }
+  
+  if (icon.logoSvgl) {
+    sources.push(icon.logoSvgl);
   }
   
   return sources;

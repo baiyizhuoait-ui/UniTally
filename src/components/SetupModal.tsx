@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { SUPPORTED_CURRENCIES } from '@/lib/currencies';
+import { SUPPORTED_CURRENCIES, getCurrencyPrimaryColor } from '@/lib/currencies';
 import { X, Upload, Check, ChevronRight, Search, BookOpen } from 'lucide-react';
 import AvatarCropper from './AvatarCropper';
 
@@ -12,9 +12,11 @@ interface Props {
 type CurrencyPickerTarget = 'primary' | 'secondary' | null;
 
 export default function SetupModal({ open, onComplete }: Props) {
-  const { t, language, setLanguage, setAvatar, setBookName, primaryCurrency, secondaryCurrency, setPrimaryCurrency, setSecondaryCurrency, refreshRates } = useApp();
+  const { t, language, setLanguage, setAvatar, setBookName, primaryCurrency, secondaryCurrency, setCurrencies, refreshRates, addWallet } = useApp();
   const [tempAvatar, setTempAvatar] = useState<string | null>(null);
   const [tempBookName, setTempBookName] = useState('');
+  const [tempPrimaryCurrency, setTempPrimaryCurrency] = useState(primaryCurrency);
+  const [tempSecondaryCurrency, setTempSecondaryCurrency] = useState(secondaryCurrency);
   const [currencyPicker, setCurrencyPicker] = useState<CurrencyPickerTarget>(null);
   const [currencySearch, setCurrencySearch] = useState('');
   const [showCropper, setShowCropper] = useState(false);
@@ -58,7 +60,31 @@ export default function SetupModal({ open, onComplete }: Props) {
     if (tempBookName.trim()) {
       setBookName(tempBookName.trim());
     }
+    setCurrencies([tempPrimaryCurrency, tempSecondaryCurrency]);
     refreshRates();
+    
+    const currenciesToCreate = [tempPrimaryCurrency];
+    if (tempSecondaryCurrency && tempSecondaryCurrency !== tempPrimaryCurrency) {
+      currenciesToCreate.push(tempSecondaryCurrency);
+    }
+    
+    currenciesToCreate.forEach((currencyCode, index) => {
+      const currencyInfo = SUPPORTED_CURRENCIES.find(c => c.code === currencyCode);
+      const defaultColor = getCurrencyPrimaryColor(currencyCode);
+      
+      addWallet({
+        name: language === 'zh' ? `${currencyInfo?.nameZh || currencyCode}现金` : `${currencyInfo?.name || currencyCode} Cash`,
+        color: defaultColor,
+        icon: '💵',
+        currency: currencyCode,
+        balance: 0,
+        type: 'cash',
+        isDefault: index === 0,
+        sortOrder: index,
+        order: index,
+      });
+    });
+    
     onComplete();
   };
 
@@ -101,24 +127,26 @@ export default function SetupModal({ open, onComplete }: Props) {
                   return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.nameZh.includes(q) || (c.nameLocal && c.nameLocal.toLowerCase().includes(q));
                 })
                 .map((c, i, arr) => {
-                  const currentValue = currencyPicker === 'primary' ? primaryCurrency : secondaryCurrency;
+                  const currentValue = currencyPicker === 'primary' ? tempPrimaryCurrency : tempSecondaryCurrency;
                   const isSelected = c.code === currentValue;
+                  const otherValue = currencyPicker === 'primary' ? tempSecondaryCurrency : tempPrimaryCurrency;
+                  const isDisabled = c.code === otherValue;
                   const displayName = language === 'zh' ? c.nameZh : (c.nameLocal || c.name);
                   return (
                     <button
                       key={c.code}
                       onClick={() => {
+                        if (isDisabled) return;
                         if (currencyPicker === 'primary') {
-                          setPrimaryCurrency(c.code);
+                          setTempPrimaryCurrency(c.code);
                         } else {
-                          setSecondaryCurrency(c.code);
+                          setTempSecondaryCurrency(c.code);
                         }
-                        refreshRates();
                         setCurrencyPicker(null);
                       }}
-                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/80 ${
-                        i < arr.length - 1 ? 'border-b border-border/30' : ''
-                      }`}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                        isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-secondary/80'
+                      } ${i < arr.length - 1 ? 'border-b border-border/30' : ''}`}
                     >
                       <span className="w-8 text-center text-lg">{c.symbol}</span>
                       <div className="flex-1 min-w-0">
@@ -248,7 +276,7 @@ export default function SetupModal({ open, onComplete }: Props) {
                   onClick={() => { setCurrencyPicker('primary'); setCurrencySearch(''); }}
                   className="w-full flex items-center justify-between bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm hover:bg-secondary/80 transition-colors"
                 >
-                  <span>{SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.symbol} {primaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.name)}</span>
+                  <span>{SUPPORTED_CURRENCIES.find(c => c.code === tempPrimaryCurrency)?.symbol} {tempPrimaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === tempPrimaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === tempPrimaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === tempPrimaryCurrency)?.name)}</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>
@@ -259,7 +287,7 @@ export default function SetupModal({ open, onComplete }: Props) {
                   onClick={() => { setCurrencyPicker('secondary'); setCurrencySearch(''); }}
                   className="w-full flex items-center justify-between bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm hover:bg-secondary/80 transition-colors"
                 >
-                  <span>{SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.symbol} {secondaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.name)}</span>
+                  <span>{SUPPORTED_CURRENCIES.find(c => c.code === tempSecondaryCurrency)?.symbol} {tempSecondaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === tempSecondaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === tempSecondaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === tempSecondaryCurrency)?.name)}</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </button>
               </div>

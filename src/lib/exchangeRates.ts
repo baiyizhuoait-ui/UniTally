@@ -54,12 +54,17 @@ export async function fetchHistoricalRates(from: string, to: string, days: numbe
   if (from === to) return;
   
   const pairKey = `${from}_${to}`;
-  const requiredDays = days;
   
-  const cachedDays = Object.keys(cache.historical).length;
   const isStale = Date.now() - cache.historicalTimestamp >= HISTORICAL_TTL;
   const isDifferentPair = cache.historicalPair !== pairKey;
-  const needsMoreData = cachedDays < requiredDays * 0.8;
+  
+  const dates = Object.keys(cache.historical).sort();
+  const relevantDates = dates.filter(d => {
+    const rate = cache.historical[d]?.[from]?.[to];
+    return rate !== undefined;
+  });
+  const cachedDaysForPair = relevantDates.length;
+  const needsMoreData = cachedDaysForPair < days * 0.8;
   
   if (!isDifferentPair && !isStale && !needsMoreData) {
     return;

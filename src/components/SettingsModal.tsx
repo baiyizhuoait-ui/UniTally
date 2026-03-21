@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import CategoryIcon from '@/components/CategoryIcon';
-import { Sun, Moon, X, Plus, Trash2, ArrowUp, ArrowDown, GripVertical } from 'lucide-react';
+import { Sun, Moon, X, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Crown } from 'lucide-react';
 import AddCategoryModal from './AddCategoryModal';
 import AddPlatformModal from './AddPlatformModal';
+import UpgradeModal from './UpgradeModal';
 import { translations } from '@/lib/i18n';
 
 interface Props {
@@ -20,6 +21,7 @@ export default function SettingsModal({ open, onClose }: Props) {
   const [tab, setTab] = useState<SettingsTab>('appearance');
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   if (!open) return null;
 
@@ -131,15 +133,24 @@ export default function SettingsModal({ open, onClose }: Props) {
 
               <div>
                 <label className="text-sm font-medium text-foreground mb-2 block">{t.settings.uiStyle || '界面风格'}</label>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={() => app.setUIStyle('default')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
                       app.uiStyle === 'default' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
                     }`}
                   >
-                    <div className="w-4 h-4 rounded bg-gradient-to-br from-primary/50 to-primary" />
-                    {t.settings.defaultStyle || '默认'}
+                    <div className="w-4 h-4 rounded border border-current" />
+                    {t.settings.defaultStyle || '极简'}
+                  </button>
+                  <button
+                    onClick={() => app.setUIStyle('glassmorphism')}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
+                      app.uiStyle === 'glassmorphism' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded bg-gradient-to-br from-white/50 to-white/10 backdrop-blur-sm border border-white/30" />
+                    {t.settings.glassmorphism || '玻璃拟态'}
                   </button>
                   <button
                     onClick={() => app.setUIStyle('neumorphism')}
@@ -149,6 +160,56 @@ export default function SettingsModal({ open, onClose }: Props) {
                   >
                     <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white/50 to-black/10 shadow-sm" />
                     {t.settings.neumorphism || '新拟态'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!app.isPremium) {
+                        setShowUpgrade(true);
+                        return;
+                      }
+                      app.setUIStyle('brutalism');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
+                      app.uiStyle === 'brutalism' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-4 h-4 relative">
+                      <div className="absolute inset-0 bg-black" style={{ clipPath: 'polygon(0 0, 100% 20%, 80% 100%, 10% 80%)' }} />
+                    </div>
+                    {t.settings.brutalism || '粗野主义'}
+                    {!app.isPremium && <Crown className="w-3 h-3 text-amber-500" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!app.isPremium) {
+                        setShowUpgrade(true);
+                        return;
+                      }
+                      app.setUIStyle('memphis');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
+                      app.uiStyle === 'memphis' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-lg bg-gradient-to-br from-yellow-400 via-pink-500 to-blue-500" />
+                    {t.settings.memphis || '孟菲斯'}
+                    {!app.isPremium && <Crown className="w-3 h-3 text-amber-500" />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (!app.isPremium) {
+                        setShowUpgrade(true);
+                        return;
+                      }
+                      app.setUIStyle('cyberpunk');
+                    }}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
+                      app.uiStyle === 'cyberpunk' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
+                    }`}
+                  >
+                    <div className="w-4 h-4 rounded-lg bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-400 animate-pulse" />
+                    {t.settings.cyberpunk || '赛博朋克'}
+                    {!app.isPremium && <Crown className="w-3 h-3 text-amber-500" />}
                   </button>
                 </div>
               </div>
@@ -244,6 +305,11 @@ export default function SettingsModal({ open, onClose }: Props) {
           app.addPlatform(data);
           setShowAddPlatform(false);
         }}
+      />
+
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
       />
     </>
   );

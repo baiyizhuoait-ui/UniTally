@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { List, Wallet, CalendarDays, BarChart3, Settings, LogOut, Trash2, AlertTriangle, X, ChevronRight, Search, Check, Plus, Bell } from 'lucide-react';
+import { List, Wallet, CalendarDays, BarChart3, Settings, LogOut, Trash2, AlertTriangle, X, ChevronRight, Search, Check, Plus, Bell, Crown, Sparkles, PlusCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 import { SUPPORTED_CURRENCIES } from '@/lib/currencies';
 import SettingsModal from '@/components/SettingsModal';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import ExchangeRateChart from '@/components/ExchangeRateChart';
 import NotificationCenter, { NotificationBadge, NotificationProvider, useNotificationManager } from '@/components/NotificationCenter';
+import UpgradeModal from '@/components/UpgradeModal';
 import { toast } from 'sonner';
 
 const NAV_ITEMS = [
@@ -17,7 +19,7 @@ const NAV_ITEMS = [
   { path: '/calendar', label: 'calendar', icon: CalendarDays },
 ];
 
-type CurrencyPickerTarget = 'primary' | 'secondary' | null;
+type CurrencyPickerTarget = 'primary' | 'other' | 'add' | null;
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -31,7 +33,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { user, logout, bookName, primaryCurrency, secondaryCurrency, setPrimaryCurrency, setSecondaryCurrency, refreshRates, t, language, setLanguage, avatar, setAvatar, clearTransactions } = useApp();
+  const { user, logout, bookName, currencies, primaryCurrency, addCurrency, removeCurrency, setPrimaryCurrency, refreshRates, t, language, setLanguage, avatar, setAvatar, clearTransactions } = useApp();
+  const { isPremium, showUpgradeModal } = useSubscription();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -40,6 +43,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [currencyPicker, setCurrencyPicker] = useState<CurrencyPickerTarget>(null);
   const [currencySearch, setCurrencySearch] = useState('');
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+  const [selectedFromCurrency, setSelectedFromCurrency] = useState<string | null>(null);
+  const [selectedToCurrency, setSelectedToCurrency] = useState<string | null>(null);
   
   const { unreadCount } = useNotificationManager();
 
@@ -63,6 +69,17 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     toast.success(t.auth.logoutSuccess);
   };
 
+  const getCurrencyName = (code: string) => {
+    const currency = SUPPORTED_CURRENCIES.find(c => c.code === code);
+    return language === 'zh' ? currency?.nameZh : (currency?.nameLocal || currency?.name);
+  };
+
+  const getCurrencySymbol = (code: string) => {
+    return SUPPORTED_CURRENCIES.find(c => c.code === code)?.symbol || code;
+  };
+
+  const otherCurrencies = currencies.slice(1);
+
   const UserMenuModal = () => {
     if (!userMenuOpen || !user) return null;
 
@@ -70,7 +87,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <div className="fixed inset-0 z-[60] flex items-center justify-center" onClick={() => setUserMenuOpen(false)}>
         <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm modal-overlay" />
         <div
-          className="relative w-full max-w-md glass-card rounded-3xl p-5 modal-content"
+          className="relative w-full max-w-md glass-card rounded-3xl p-5 modal-content max-h-[90vh] overflow-y-auto"
           onClick={e => e.stopPropagation()}
         >
           <div className="flex items-center justify-between mb-5">
@@ -80,28 +97,38 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </button>
           </div>
 
-          <div className="flex items-center gap-3 mb-5 p-3 bg-secondary rounded-2xl">
+          <div className="flex items-center gap-3 mb-5 p-3 bg-secondary rounded-2xl neu-info-card">
             {avatar ? (
-              <img src={avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+              <div className="neu-avatar-container">
+                <img src={avatar} alt="Avatar" className="w-12 h-12 rounded-full object-cover" />
+              </div>
             ) : (
-              <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
-                {getInitials(user.name, user.email)}
+              <div className="neu-avatar-container">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-semibold text-lg">
+                  {getInitials(user.name, user.email)}
+                </div>
               </div>
             )}
             <div className="flex-1 min-w-0">
               <div className="font-medium text-foreground truncate">{user.name || '用户'}</div>
               <div className="text-sm text-muted-foreground truncate">{user.email}</div>
             </div>
+            {isPremium && (
+              <div className="px-2 py-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium flex items-center gap-1">
+                <Crown className="w-3 h-3" />
+                VIP
+              </div>
+            )}
           </div>
 
           <div className="mb-5">
             <label className="text-xs text-muted-foreground mb-2 block">{t.account.language}</label>
-            <div className="flex items-center justify-center bg-secondary/80 rounded-xl p-1">
+            <div className="flex items-center justify-center bg-secondary/80 rounded-xl p-1 gap-2">
               <button
                 onClick={() => setLanguage('zh')}
-                className={`flex-1 py-3 px-6 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                className={`flex-1 py-3 px-6 rounded-lg text-sm font-semibold transition-all duration-200 neu-language-btn ${
                   language === 'zh' 
-                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    ? 'active bg-primary text-primary-foreground' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -109,9 +136,9 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
               </button>
               <button
                 onClick={() => setLanguage('en')}
-                className={`flex-1 py-3 px-6 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                className={`flex-1 py-3 px-6 rounded-lg text-sm font-semibold transition-all duration-200 neu-language-btn ${
                   language === 'en' 
-                    ? 'bg-primary text-primary-foreground shadow-sm' 
+                    ? 'active bg-primary text-primary-foreground' 
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -120,33 +147,97 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </div>
           </div>
 
-          <div className="space-y-3 mb-5">
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">{t.account.primaryCurrency}</label>
-              <button
-                onClick={() => { setCurrencyPicker('primary'); setCurrencySearch(''); }}
-                className="w-full flex items-center justify-between bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm hover:bg-secondary/80 transition-colors"
-              >
-                <span>{SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.symbol} {primaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === primaryCurrency)?.name)}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs text-muted-foreground mb-1 block">{t.account.secondaryCurrency}</label>
-              <button
-                onClick={() => { setCurrencyPicker('secondary'); setCurrencySearch(''); }}
-                className="w-full flex items-center justify-between bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm hover:bg-secondary/80 transition-colors"
-              >
-                <span>{SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.symbol} {secondaryCurrency} - {language === 'zh' ? SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.nameZh : (SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.nameLocal || SUPPORTED_CURRENCIES.find(c => c.code === secondaryCurrency)?.name)}</span>
-                <ChevronRight className="w-4 h-4 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-
           <div className="mb-5">
-            <ExchangeRateChart compact />
+            <label className="text-xs text-muted-foreground mb-2 block">
+              {language === 'zh' ? '货币设置' : 'Currency Settings'}
+            </label>
+            
+            <div className="space-y-2">
+              {currencies.map((code, index) => (
+                <div key={code}>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    {index === 0 
+                      ? (language === 'zh' ? '主要货币' : 'Primary Currency')
+                      : (language === 'zh' ? `第${index + 1}货币` : `${getOrdinal(index + 1)} Currency`)}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        if (index === 0) {
+                          setCurrencyPicker('primary');
+                        } else {
+                          setCurrencyPicker('other');
+                        }
+                        setCurrencySearch('');
+                      }}
+                      className="flex-1 flex items-center justify-between bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm hover:bg-secondary/80 transition-colors"
+                    >
+                      <span>{getCurrencySymbol(code)} {code} - {getCurrencyName(code)}</span>
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    {index > 0 && currencies.length > 2 && (
+                      <button
+                        onClick={() => {
+                          if (removeCurrency(code)) {
+                            toast.success(language === 'zh' ? `已移除 ${code}` : `Removed ${code}`);
+                          }
+                        }}
+                        className="p-2.5 rounded-xl text-expense bg-expense/10 hover:bg-expense/20 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {isPremium && (
+              <button
+                onClick={() => setCurrencyPicker('add')}
+                className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-primary/50 text-primary text-sm hover:bg-primary/5 transition-colors"
+              >
+                <PlusCircle className="w-4 h-4" />
+                {language === 'zh' ? '添加货币' : 'Add Currency'}
+              </button>
+            )}
+            {!isPremium && currencies.length === 2 && (
+              <button
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  setUpgradeModalOpen(true);
+                }}
+                className="w-full mt-3 flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-muted text-muted-foreground text-sm hover:border-primary/50 hover:text-primary transition-colors"
+              >
+                <PlusCircle className="w-4 h-4" />
+                {language === 'zh' ? '添加更多货币（需升级）' : 'Add More Currencies (Upgrade)'}
+              </button>
+            )}
           </div>
+
+          <div className="mb-4">
+            <ExchangeRateChart 
+              compact 
+              currencies={currencies}
+              fromCurrency={selectedFromCurrency || primaryCurrency}
+              toCurrency={selectedToCurrency || otherCurrencies[0] || primaryCurrency}
+              onFromChange={setSelectedFromCurrency}
+              onToChange={setSelectedToCurrency}
+            />
+          </div>
+
+          {!isPremium && (
+            <button
+              onClick={() => {
+                setUserMenuOpen(false);
+                setUpgradeModalOpen(true);
+              }}
+              className="w-full mb-4 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-pink-500 text-white font-medium hover:opacity-90 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25"
+            >
+              <Sparkles className="w-5 h-5" />
+              <span>{language === 'zh' ? '成为永久会员' : 'Become a Lifetime Member'}</span>
+            </button>
+          )}
 
           <div className="flex gap-3">
             <button
@@ -169,8 +260,55 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const getOrdinal = (n: number): string => {
+    const ordinals = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (ordinals[(v - 20) % 10] || ordinals[v] || ordinals[0]);
+  };
+
   const CurrencyPickerModal = () => {
     if (!currencyPicker) return null;
+
+    const isAddMode = currencyPicker === 'add';
+    const isPrimaryMode = currencyPicker === 'primary';
+    const isOtherMode = currencyPicker === 'other';
+
+    const handleSelectCurrency = (code: string) => {
+      if (isAddMode) {
+        if (currencies.includes(code)) {
+          toast.error(language === 'zh' ? '该货币已存在' : 'Currency already exists');
+          return;
+        }
+        addCurrency(code);
+        toast.success(language === 'zh' ? `已添加 ${code}` : `Added ${code}`);
+        setCurrencyPicker(null);
+        return;
+      }
+
+      if (isPrimaryMode) {
+        if (code === primaryCurrency) {
+          setCurrencyPicker(null);
+          return;
+        }
+        setPrimaryCurrency(code);
+        refreshRates();
+        setCurrencyPicker(null);
+        return;
+      }
+
+      if (isOtherMode) {
+        if (currencies.includes(code) && code !== primaryCurrency) {
+          setCurrencyPicker(null);
+          return;
+        }
+        if (!currencies.includes(code)) {
+          addCurrency(code);
+        }
+        refreshRates();
+        setCurrencyPicker(null);
+        return;
+      }
+    };
 
     return (
       <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center" onClick={() => setCurrencyPicker(null)}>
@@ -181,7 +319,11 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         >
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <h3 className="text-base font-semibold text-foreground">
-              {currencyPicker === 'primary' ? t.account.primaryCurrency : t.account.secondaryCurrency}
+              {isAddMode 
+                ? (language === 'zh' ? '添加货币' : 'Add Currency')
+                : isPrimaryMode
+                  ? t.account.primaryCurrency
+                  : (language === 'zh' ? '选择货币' : 'Select Currency')}
             </h3>
             <button onClick={() => setCurrencyPicker(null)} className="p-1.5 rounded-xl hover:bg-secondary transition-colors">
               <X className="w-5 h-5 text-muted-foreground" />
@@ -207,27 +349,21 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
                   const q = currencySearch.toLowerCase();
                   return c.code.toLowerCase().includes(q) || c.name.toLowerCase().includes(q) || c.nameZh.includes(q) || (c.nameLocal && c.nameLocal.toLowerCase().includes(q));
                 })
+                .filter(c => {
+                  if (isAddMode) return !currencies.includes(c.code);
+                  return true;
+                })
                 .map((c, i, arr) => {
-                  const currentValue = currencyPicker === 'primary' ? primaryCurrency : secondaryCurrency;
-                  const isSelected = c.code === currentValue;
+                  const isSelected = isPrimaryMode 
+                    ? c.code === primaryCurrency 
+                    : isOtherMode 
+                      ? currencies.includes(c.code) && c.code !== primaryCurrency
+                      : false;
                   const displayName = language === 'zh' ? c.nameZh : (c.nameLocal || c.name);
                   return (
                     <button
                       key={c.code}
-                      onClick={() => {
-                        const otherValue = currencyPicker === 'primary' ? secondaryCurrency : primaryCurrency;
-                        if (c.code === otherValue) {
-                          toast.error(t.account.primaryCurrency + ' ' + t.account.secondaryCurrency);
-                          return;
-                        }
-                        if (currencyPicker === 'primary') {
-                          setPrimaryCurrency(c.code);
-                        } else {
-                          setSecondaryCurrency(c.code);
-                        }
-                        refreshRates();
-                        setCurrencyPicker(null);
-                      }}
+                      onClick={() => handleSelectCurrency(c.code)}
                       className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-secondary/80 ${
                         i < arr.length - 1 ? 'border-b border-border/30' : ''
                       }`}
@@ -324,7 +460,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <header className="glass sticky top-0 z-30 flex items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-bold text-foreground">💰 {bookName || t.app.name}</h1>
+          <h1 className="text-lg font-bold text-foreground">{bookName || t.app.name}</h1>
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setNotificationOpen(true)} 
@@ -410,6 +546,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         <UserMenuModal />
         <CurrencyPickerModal />
         <ConfirmModals />
+        <UpgradeModal open={upgradeModalOpen} onClose={() => setUpgradeModalOpen(false)} />
       </div>
     );
   }
@@ -418,7 +555,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex bg-background">
       <aside className="glass w-56 flex-shrink-0 flex flex-col border-r border-border/50 sticky top-0 h-screen">
         <div className="p-5">
-          <h1 className="text-lg font-bold text-foreground">💰 {bookName || t.app.name}</h1>
+          <h1 className="text-lg font-bold text-foreground">{bookName || t.app.name}</h1>
         </div>
         
         <nav className="flex-1 px-3 py-4 space-y-2">
@@ -499,6 +636,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <UserMenuModal />
       <CurrencyPickerModal />
       <ConfirmModals />
+      <UpgradeModal open={upgradeModalOpen} onClose={() => setUpgradeModalOpen(false)} />
     </div>
   );
 }
