@@ -4,6 +4,7 @@ import { X, Check } from 'lucide-react';
 import ColorPicker from '@/components/ColorPicker';
 import WalletIconPicker from '@/components/WalletIconPicker';
 import WalletIconImg from '@/components/WalletIconImg';
+import NumberPicker from '@/components/NumberPicker';
 import { getWalletIconById } from '@/lib/walletIcons';
 import type { Wallet } from '@/types';
 import { translations } from '@/lib/i18n';
@@ -241,45 +242,43 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
                   <label className="text-sm text-muted-foreground mb-1 block">
                     {language === 'zh' ? '账单日 (每月)' : 'Billing Day'}
                   </label>
-                  <select
-                    value={billingDay}
-                    onChange={e => setBillingDay(e.target.value)}
-                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
-                    ))}
-                  </select>
+                  <NumberPicker
+                    value={parseInt(billingDay) || 1}
+                    onChange={v => setBillingDay(v.toString())}
+                    min={1}
+                    max={31}
+                    language={language}
+                    title={language === 'zh' ? '选择账单日' : 'Select Billing Day'}
+                    suffix={language === 'zh' ? '日' : ''}
+                  />
                 </div>
                 <div>
                   <label className="text-sm text-muted-foreground mb-1 block">
                     {language === 'zh' ? '还款日 (每月)' : 'Due Day'}
                   </label>
-                  <select
-                    value={dueDay}
-                    onChange={e => setDueDay(e.target.value)}
-                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
-                  >
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                      <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
-                    ))}
-                  </select>
+                  <NumberPicker
+                    value={parseInt(dueDay) || 1}
+                    onChange={v => setDueDay(v.toString())}
+                    min={1}
+                    max={31}
+                    language={language}
+                    title={language === 'zh' ? '选择还款日' : 'Select Due Day'}
+                    suffix={language === 'zh' ? '日' : ''}
+                  />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="text-sm text-muted-foreground mb-1 block">
                     {language === 'zh' ? '还款提醒 (提前天数)' : 'Remind Days Before Due'}
                   </label>
-                  <select
-                    value={remindDays}
-                    onChange={e => setRemindDays(e.target.value)}
-                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
-                  >
-                    {[1, 2, 3, 5, 7, 10, 14].map(days => (
-                      <option key={days} value={days}>
-                        {language === 'zh' ? `提前 ${days} 天` : `${days} days before`}
-                      </option>
-                    ))}
-                  </select>
+                  <NumberPicker
+                    value={parseInt(remindDays) || 3}
+                    onChange={v => setRemindDays(v.toString())}
+                    min={1}
+                    max={14}
+                    language={language}
+                    title={language === 'zh' ? '选择提醒天数' : 'Select Remind Days'}
+                    suffix={language === 'zh' ? '天' : 'days'}
+                  />
                 </div>
               </div>
             </div>

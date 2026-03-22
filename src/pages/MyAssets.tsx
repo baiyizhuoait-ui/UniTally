@@ -9,6 +9,7 @@ import WalletIconImg from '@/components/WalletIconImg';
 import { getWalletIconById } from '@/lib/walletIcons';
 import EditWalletModal from '@/components/EditWalletModal';
 import WalletStatsModal from '@/components/WalletStatsModal';
+import NumberPicker from '@/components/NumberPicker';
 import type { Wallet as WalletType } from '@/types';
 
 const WALLET_TYPE_CONFIG = {
@@ -512,46 +513,44 @@ export default function MyAssets() {
                     <label className="text-xs text-muted-foreground mb-1 block">
                       {language === 'zh' ? '账单日 (每月)' : 'Billing Day'}
                     </label>
-                    <select
-                      value={newWallet.billingDay}
-                      onChange={e => setNewWallet({ ...newWallet, billingDay: e.target.value })}
-                      className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                        <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
-                      ))}
-                    </select>
+                    <NumberPicker
+                      value={parseInt(newWallet.billingDay) || 1}
+                      onChange={v => setNewWallet({ ...newWallet, billingDay: v.toString() })}
+                      min={1}
+                      max={31}
+                      language={language}
+                      title={language === 'zh' ? '选择账单日' : 'Select Billing Day'}
+                      suffix={language === 'zh' ? '日' : ''}
+                    />
                   </div>
                   <div>
                     <label className="text-xs text-muted-foreground mb-1 block">
                       {language === 'zh' ? '还款日 (每月)' : 'Due Day'}
                     </label>
-                    <select
-                      value={newWallet.dueDay}
-                      onChange={e => setNewWallet({ ...newWallet, dueDay: e.target.value })}
-                      className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
-                    >
-                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                        <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
-                      ))}
-                    </select>
+                    <NumberPicker
+                      value={parseInt(newWallet.dueDay) || 1}
+                      onChange={v => setNewWallet({ ...newWallet, dueDay: v.toString() })}
+                      min={1}
+                      max={31}
+                      language={language}
+                      title={language === 'zh' ? '选择还款日' : 'Select Due Day'}
+                      suffix={language === 'zh' ? '日' : ''}
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground mb-1 block">
                     {language === 'zh' ? '还款提醒 (提前天数)' : 'Remind Days Before Due'}
                   </label>
-                  <select
-                    value={newWallet.remindDays}
-                    onChange={e => setNewWallet({ ...newWallet, remindDays: e.target.value })}
-                    className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
-                  >
-                    {[1, 2, 3, 5, 7, 10, 14].map(days => (
-                      <option key={days} value={days}>
-                        {language === 'zh' ? `提前 ${days} 天` : `${days} days before`}
-                      </option>
-                    ))}
-                  </select>
+                  <NumberPicker
+                    value={parseInt(newWallet.remindDays) || 3}
+                    onChange={v => setNewWallet({ ...newWallet, remindDays: v.toString() })}
+                    min={1}
+                    max={14}
+                    language={language}
+                    title={language === 'zh' ? '选择提醒天数' : 'Select Remind Days'}
+                    suffix={language === 'zh' ? '天' : 'days'}
+                  />
                 </div>
               </div>
             ) : (
