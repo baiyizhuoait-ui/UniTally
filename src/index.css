@@ -213,6 +213,39 @@
     @apply glass rounded-3xl p-5 shadow-lg;
   }
 
+  .ios-toggle {
+    position: relative;
+    width: 51px;
+    height: 31px;
+    background: hsl(var(--muted));
+    border-radius: 31px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: none;
+    flex-shrink: 0;
+  }
+
+  .ios-toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 27px;
+    height: 27px;
+    background: white;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .ios-toggle.active {
+    background: hsl(var(--primary));
+  }
+
+  .ios-toggle.active::after {
+    left: 22px;
+  }
+
   .glass-card-hover {
     @apply glass-card transition-all duration-300;
   }
