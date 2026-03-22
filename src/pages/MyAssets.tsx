@@ -46,6 +46,8 @@ export default function MyAssets() {
     iconId: number | undefined;
     type: WalletType['type'];
     creditLimit: string;
+    billingDay: string;
+    dueDay: string;
   }>({
     name: '',
     currency: primaryCurrency,
@@ -54,6 +56,8 @@ export default function MyAssets() {
     iconId: undefined,
     type: 'cash',
     creditLimit: '',
+    billingDay: '1',
+    dueDay: '1',
   });
   const [showCreate, setShowCreate] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -138,6 +142,8 @@ export default function MyAssets() {
       iconId: newWallet.iconId,
       type: newWallet.type,
       creditLimit: newWallet.type === 'credit' ? parseFloat(newWallet.creditLimit) || 0 : undefined,
+      billingDay: newWallet.type === 'credit' ? parseInt(newWallet.billingDay) || 1 : undefined,
+      dueDay: newWallet.type === 'credit' ? parseInt(newWallet.dueDay) || 1 : undefined,
       isDefault: false,
     });
     setNewWallet({
@@ -148,6 +154,8 @@ export default function MyAssets() {
       iconId: undefined,
       type: 'cash',
       creditLimit: '',
+      billingDay: '1',
+      dueDay: '1',
     });
     setShowCreate(false);
   };
@@ -250,6 +258,13 @@ export default function MyAssets() {
                   <div className="text-xs text-muted-foreground/70">
                     {language === 'zh' ? `限额 ${getCurrencySymbol(w.currency)}${w.creditLimit?.toFixed(0) || 0}` : `Limit ${getCurrencySymbol(w.currency)}${w.creditLimit?.toFixed(0) || 0}`}
                   </div>
+                  {(w.billingDay || w.dueDay) && (
+                    <div className="text-xs text-muted-foreground/50 mt-1">
+                      {w.billingDay && <span>{language === 'zh' ? `${w.billingDay}日账单` : `Bill on ${w.billingDay}`}</span>}
+                      {w.billingDay && w.dueDay && <span className="mx-1">·</span>}
+                      {w.dueDay && <span>{language === 'zh' ? `${w.dueDay}日还款` : `Due on ${w.dueDay}`}</span>}
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
@@ -488,6 +503,36 @@ export default function MyAssets() {
                     className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none placeholder:text-muted-foreground"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      {language === 'zh' ? '账单日 (每月)' : 'Billing Day'}
+                    </label>
+                    <select
+                      value={newWallet.billingDay}
+                      onChange={e => setNewWallet({ ...newWallet, billingDay: e.target.value })}
+                      className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">
+                      {language === 'zh' ? '还款日 (每月)' : 'Due Day'}
+                    </label>
+                    <select
+                      value={newWallet.dueDay}
+                      onChange={e => setNewWallet({ ...newWallet, dueDay: e.target.value })}
+                      className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
+                    >
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             ) : (
               <input
@@ -511,6 +556,8 @@ export default function MyAssets() {
                     iconId: undefined,
                     type: 'cash',
                     creditLimit: '',
+                    billingDay: '1',
+                    dueDay: '1',
                   });
                 }}
                 className="flex-1 py-2 rounded-xl bg-secondary text-muted-foreground text-sm"

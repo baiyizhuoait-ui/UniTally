@@ -26,6 +26,8 @@ export interface Wallet {
   balance: number;
   type: 'cash' | 'savings' | 'credit' | 'ewallet';
   creditLimit?: number;
+  billingDay?: number;
+  dueDay?: number;
   isDefault?: boolean;
   sortOrder?: number;
   order: number;

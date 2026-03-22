@@ -40,6 +40,8 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
   const [iconId, setIconId] = useState<number | undefined>();
   const [type, setType] = useState<Wallet['type']>('cash');
   const [creditLimit, setCreditLimit] = useState('');
+  const [billingDay, setBillingDay] = useState('1');
+  const [dueDay, setDueDay] = useState('1');
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   useEffect(() => {
@@ -51,6 +53,8 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
       setIconId(wallet.iconId);
       setType(wallet.type || 'cash');
       setCreditLimit(wallet.creditLimit?.toString() || '');
+      setBillingDay(wallet.billingDay?.toString() || '1');
+      setDueDay(wallet.dueDay?.toString() || '1');
     }
   }, [wallet]);
 
@@ -68,6 +72,8 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
       iconId,
       type,
       creditLimit: type === 'credit' ? parseFloat(creditLimit) || 0 : undefined,
+      billingDay: type === 'credit' ? parseInt(billingDay) || 1 : undefined,
+      dueDay: type === 'credit' ? parseInt(dueDay) || 1 : undefined,
     });
 
     onClose();
@@ -226,6 +232,36 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
                   placeholder={language === 'zh' ? '欠款填负数' : 'Negative if you owe'}
                   className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none placeholder:text-muted-foreground"
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">
+                    {language === 'zh' ? '账单日 (每月)' : 'Billing Day'}
+                  </label>
+                  <select
+                    value={billingDay}
+                    onChange={e => setBillingDay(e.target.value)}
+                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">
+                    {language === 'zh' ? '还款日 (每月)' : 'Due Day'}
+                  </label>
+                  <select
+                    value={dueDay}
+                    onChange={e => setDueDay(e.target.value)}
+                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
+                  >
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                      <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           ) : (

@@ -154,6 +154,22 @@ export default function WalletStatsModal({ open, wallet, onClose }: Props) {
             <div className="text-2xl font-bold text-expense">
               {getCurrencySymbol(wallet.currency)}{totalExpense.toFixed(2)}
             </div>
+            {wallet.type === 'credit' && (
+              <div className="mt-3 flex justify-center gap-4 text-xs text-muted-foreground">
+                {wallet.billingDay && (
+                  <div className="flex items-center gap-1">
+                    <span>{language === 'zh' ? '账单日:' : 'Billing:'}</span>
+                    <span className="font-medium text-foreground">{wallet.billingDay}{language === 'zh' ? '日' : ''}</span>
+                  </div>
+                )}
+                {wallet.dueDay && (
+                  <div className="flex items-center gap-1">
+                    <span>{language === 'zh' ? '还款日:' : 'Due:'}</span>
+                    <span className="font-medium text-foreground">{wallet.dueDay}{language === 'zh' ? '日' : ''}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {categoryStats.length > 0 ? (
