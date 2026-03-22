@@ -42,6 +42,7 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
   const [creditLimit, setCreditLimit] = useState('');
   const [billingDay, setBillingDay] = useState('1');
   const [dueDay, setDueDay] = useState('1');
+  const [remindDays, setRemindDays] = useState('3');
   const [showIconPicker, setShowIconPicker] = useState(false);
 
   useEffect(() => {
@@ -55,6 +56,7 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
       setCreditLimit(wallet.creditLimit?.toString() || '');
       setBillingDay(wallet.billingDay?.toString() || '1');
       setDueDay(wallet.dueDay?.toString() || '1');
+      setRemindDays(wallet.remindDays?.toString() || '3');
     }
   }, [wallet]);
 
@@ -74,6 +76,7 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
       creditLimit: type === 'credit' ? parseFloat(creditLimit) || 0 : undefined,
       billingDay: type === 'credit' ? parseInt(billingDay) || 1 : undefined,
       dueDay: type === 'credit' ? parseInt(dueDay) || 1 : undefined,
+      remindDays: type === 'credit' ? parseInt(remindDays) || 3 : undefined,
     });
 
     onClose();
@@ -259,6 +262,22 @@ export default function EditWalletModal({ open, wallet, onClose }: Props) {
                   >
                     {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
                       <option key={day} value={day}>{day}{language === 'zh' ? '日' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1 block">
+                    {language === 'zh' ? '还款提醒 (提前天数)' : 'Remind Days Before Due'}
+                  </label>
+                  <select
+                    value={remindDays}
+                    onChange={e => setRemindDays(e.target.value)}
+                    className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none"
+                  >
+                    {[1, 2, 3, 5, 7, 10, 14].map(days => (
+                      <option key={days} value={days}>
+                        {language === 'zh' ? `提前 ${days} 天` : `${days} days before`}
+                      </option>
                     ))}
                   </select>
                 </div>

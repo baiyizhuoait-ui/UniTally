@@ -28,6 +28,7 @@ export interface Wallet {
   creditLimit?: number;
   billingDay?: number;
   dueDay?: number;
+  remindDays?: number;
   isDefault?: boolean;
   sortOrder?: number;
   order: number;
@@ -79,7 +80,7 @@ export interface Subscription {
 
 export interface Notification {
   id: string;
-  type: 'budget_over' | 'budget_expire' | 'subscription_expire';
+  type: 'budget_over' | 'budget_expire' | 'subscription_expire' | 'credit_due';
   title: string;
   message: string;
   relatedId: string;

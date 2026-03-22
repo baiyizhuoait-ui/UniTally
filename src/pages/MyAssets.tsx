@@ -48,6 +48,7 @@ export default function MyAssets() {
     creditLimit: string;
     billingDay: string;
     dueDay: string;
+    remindDays: string;
   }>({
     name: '',
     currency: primaryCurrency,
@@ -58,6 +59,7 @@ export default function MyAssets() {
     creditLimit: '',
     billingDay: '1',
     dueDay: '1',
+    remindDays: '3',
   });
   const [showCreate, setShowCreate] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
@@ -144,6 +146,7 @@ export default function MyAssets() {
       creditLimit: newWallet.type === 'credit' ? parseFloat(newWallet.creditLimit) || 0 : undefined,
       billingDay: newWallet.type === 'credit' ? parseInt(newWallet.billingDay) || 1 : undefined,
       dueDay: newWallet.type === 'credit' ? parseInt(newWallet.dueDay) || 1 : undefined,
+      remindDays: newWallet.type === 'credit' ? parseInt(newWallet.remindDays) || 3 : undefined,
       isDefault: false,
     });
     setNewWallet({
@@ -156,6 +159,7 @@ export default function MyAssets() {
       creditLimit: '',
       billingDay: '1',
       dueDay: '1',
+      remindDays: '3',
     });
     setShowCreate(false);
   };
@@ -533,6 +537,22 @@ export default function MyAssets() {
                     </select>
                   </div>
                 </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    {language === 'zh' ? '还款提醒 (提前天数)' : 'Remind Days Before Due'}
+                  </label>
+                  <select
+                    value={newWallet.remindDays}
+                    onChange={e => setNewWallet({ ...newWallet, remindDays: e.target.value })}
+                    className="w-full bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none"
+                  >
+                    {[1, 2, 3, 5, 7, 10, 14].map(days => (
+                      <option key={days} value={days}>
+                        {language === 'zh' ? `提前 ${days} 天` : `${days} days before`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ) : (
               <input
@@ -558,6 +578,7 @@ export default function MyAssets() {
                     creditLimit: '',
                     billingDay: '1',
                     dueDay: '1',
+                    remindDays: '3',
                   });
                 }}
                 className="flex-1 py-2 rounded-xl bg-secondary text-muted-foreground text-sm"

@@ -22,13 +22,14 @@ export function useNotificationManager() {
 }
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const { budgets, subscriptions, transactions, language } = useApp();
+  const { budgets, subscriptions, transactions, language, wallets } = useApp();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
   const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   const generatedNotifications = useMemo(() => {
     const notifications: Notification[] = [];
     const today = new Date().toISOString().split('T')[0];
+    const currentDay = new Date().getDate();
 
     budgets.forEach(budget => {
       if (!budget.notifyEnabled) return;
@@ -97,8 +98,44 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       }
     });
 
+    wallets.filter(w => w.type === 'credit' && w.dueDay && w.remindDays).forEach(wallet => {
+      const dueDay = wallet.dueDay!;
+      const remindDays = wallet.remindDays!;
+      
+      const daysUntilDue = dueDay - currentDay;
+      if (daysUntilDue < 0) {
+        const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+        const daysUntilDueNextMonth = daysInMonth - currentDay + dueDay;
+        if (daysUntilDueNextMonth <= remindDays && daysUntilDueNextMonth >= 0) {
+          notifications.push({
+            id: `credit_due_${wallet.id}`,
+            type: 'credit_due',
+            title: language === 'zh' ? '信用卡还款提醒' : 'Credit Card Due Reminder',
+            message: language === 'zh'
+              ? `信用卡「${wallet.name}」将在 ${daysUntilDueNextMonth} 天后到期还款`
+              : `Credit card "${wallet.name}" payment due in ${daysUntilDueNextMonth} days`,
+            relatedId: wallet.id,
+            createdAt: Date.now(),
+            isRead: false,
+          });
+        }
+      } else if (daysUntilDue <= remindDays && daysUntilDue >= 0) {
+        notifications.push({
+          id: `credit_due_${wallet.id}`,
+          type: 'credit_due',
+          title: language === 'zh' ? '信用卡还款提醒' : 'Credit Card Due Reminder',
+          message: language === 'zh'
+            ? `信用卡「${wallet.name}」将在 ${daysUntilDue} 天后到期还款`
+            : `Credit card "${wallet.name}" payment due in ${daysUntilDue} days`,
+          relatedId: wallet.id,
+          createdAt: Date.now(),
+          isRead: false,
+        });
+      }
+    });
+
     return notifications;
-  }, [budgets, subscriptions, transactions, language]);
+  }, [budgets, subscriptions, transactions, language, wallets]);
 
   const notifications = useMemo(() => {
     return generatedNotifications
