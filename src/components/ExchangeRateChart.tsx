@@ -193,12 +193,23 @@ export default function ExchangeRateChart({
               />
             </div>
           </div>
-          <button
-            onClick={() => setReversed(!reversed)}
-            className="p-2.5 rounded-2xl bg-secondary hover:bg-muted transition-all text-foreground"
-          >
-            <ArrowRightLeft className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {(() => {
+              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
+              const displayValue = displayRate * 100;
+              return (
+                <span className="text-xl font-bold text-foreground">
+                  100 {fromCur} = {displayValue.toFixed(2)} {toCur}
+                </span>
+              );
+            })()}
+            <button
+              onClick={() => setReversed(!reversed)}
+              className="p-2.5 rounded-2xl bg-secondary hover:bg-muted transition-all text-foreground"
+            >
+              <ArrowRightLeft className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       )}
 
@@ -240,7 +251,19 @@ export default function ExchangeRateChart({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-lg font-bold text-foreground">{latestRate.toFixed(4)}</span>
+            {(() => {
+              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
+              const fromSymbol = getCurrencySymbol(fromCur);
+              const toSymbol = getCurrencySymbol(toCur);
+              const displayValue = displayRate * 100;
+              return (
+                <span className="text-lg font-bold text-foreground">
+                  {language === 'zh' 
+                    ? `100 ${fromCur} = ${displayValue.toFixed(2)} ${toCur}`
+                    : `100 ${fromCur} = ${displayValue.toFixed(2)} ${toCur}`}
+                </span>
+              );
+            })()}
             <button
               onClick={() => setReversed(!reversed)}
               className="p-1.5 rounded-xl bg-secondary hover:bg-muted transition-all text-foreground"
