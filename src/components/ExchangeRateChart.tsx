@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRatesViaEUR, fetchAllLatestRates, getLatestCachedRate } from '@/lib/exchangeRates';
+import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRates, getLatestCachedRate } from '@/lib/exchangeRates';
 import { ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { translations } from '@/lib/i18n';
@@ -80,7 +80,7 @@ export default function ExchangeRateChart({
   useEffect(() => {
     const days = getPeriodDays(period);
     setIsLoading(true);
-    fetchHistoricalRatesViaEUR(localFromCurrency, localToCurrency, days).finally(() => {
+    fetchHistoricalRates(localFromCurrency, localToCurrency, days).finally(() => {
       setIsLoading(false);
     });
   }, [period, localFromCurrency, localToCurrency]);
@@ -195,8 +195,7 @@ export default function ExchangeRateChart({
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const currentRate = getLatestCachedRate(fromCur, toCur);
-              const displayRate = reversed ? (currentRate ? 1 / currentRate : 0) : currentRate;
+              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
               const displayValue = displayRate * 100;
               return (
                 <span className="text-xl font-bold text-foreground">
@@ -253,8 +252,7 @@ export default function ExchangeRateChart({
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const currentRate = getLatestCachedRate(fromCur, toCur);
-              const displayRate = reversed ? (currentRate ? 1 / currentRate : 0) : currentRate;
+              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
               const displayValue = displayRate * 100;
               return (
                 <span className="text-lg font-bold text-foreground">
