@@ -2,10 +2,11 @@ import { useState, useMemo } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
 import { getHistoricalRate } from '@/lib/exchangeRates';
-import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Check, Calendar } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import CategoryIcon from '@/components/CategoryIcon';
 import OptionPicker from '@/components/OptionPicker';
+import DatePicker from '@/components/DatePicker';
 import { translations } from '@/lib/i18n';
 
 function getDateFromDatetime(datetime: string): string {
@@ -20,8 +21,15 @@ export default function ExpenseCalendar() {
   const [chartCurrency, setChartCurrency] = useState(primaryCurrency);
   const [filterWallet, setFilterWallet] = useState('all');
   const [filterPlatform, setFilterPlatform] = useState('all');
+  const [filterStartDate, setFilterStartDate] = useState('');
+  const [filterEndDate, setFilterEndDate] = useState('');
   const [showWalletPicker, setShowWalletPicker] = useState(false);
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
+  const [showDateFilterModal, setShowDateFilterModal] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState('');
+  const [tempEndDate, setTempEndDate] = useState('');
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
@@ -161,6 +169,9 @@ export default function ExpenseCalendar() {
       if (tx.type === 'income' || tx.type === 'transfer' || tx.category === 'transfer') return false;
       if (filterWallet !== 'all' && tx.walletId !== filterWallet) return false;
       if (filterPlatform !== 'all' && tx.platformId !== filterPlatform) return false;
+      const txDate = getDateFromDatetime(tx.datetime);
+      if (filterStartDate && txDate < filterStartDate) return false;
+      if (filterEndDate && txDate > filterEndDate) return false;
       return true;
     });
 
@@ -180,7 +191,7 @@ export default function ExpenseCalendar() {
         return { name: translatedName, value: parseFloat(value.toFixed(2)), color: cat?.color || '#94a3b8', icon: cat?.icon || '📦' };
       })
       .sort((a, b) => b.value - a.value);
-  }, [transactions, categories, filterWallet, filterPlatform, primaryCurrency, latestRate, t.categories]);
+  }, [transactions, categories, filterWallet, filterPlatform, filterStartDate, filterEndDate, primaryCurrency, latestRate, t.categories]);
 
   const prevMonth = () => setCurrentMonth(new Date(year, month - 1, 1));
   const nextMonth = () => setCurrentMonth(new Date(year, month + 1, 1));
@@ -210,6 +221,21 @@ export default function ExpenseCalendar() {
           >
             <span>{filterPlatform === 'all' ? t.dashboard.allPlatforms : (t.platforms[filterPlatform as keyof typeof t.platforms] || platforms.find(p => p.id === filterPlatform)?.name)}</span>
             <ChevronDown className="w-4 h-4 text-muted-foreground" />
+          </button>
+          <button
+            onClick={() => {
+              setTempStartDate(filterStartDate);
+              setTempEndDate(filterEndDate);
+              setShowDateFilterModal(true);
+            }}
+            className="bg-secondary text-foreground rounded-xl px-3 py-2 text-sm outline-none flex-1 flex items-center justify-between"
+          >
+            <span className="truncate">
+              {filterStartDate || filterEndDate
+                ? `${filterStartDate || '...'} ~ ${filterEndDate || '...'}`
+                : (language === 'zh' ? '全部时间' : 'All Time')}
+            </span>
+            <Calendar className="w-4 h-4 text-muted-foreground" />
           </button>
         </div>
 
@@ -431,6 +457,128 @@ export default function ExpenseCalendar() {
           ...platforms.map(p => ({ id: p.id, name: t.platforms[p.id as keyof typeof t.platforms] || p.name, icon: p.icon }))
         ]}
         title={language === 'zh' ? '选择平台' : 'Select Platform'}
+      />
+
+      {showDateFilterModal && (
+        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center" onClick={() => setShowDateFilterModal(false)}>
+          <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm modal-overlay" />
+          <div
+            className="relative w-full sm:max-w-md glass-card rounded-t-3xl sm:rounded-3xl modal-content overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
+              <button
+                onClick={() => setShowDateFilterModal(false)}
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {language === 'zh' ? '取消' : 'Cancel'}
+              </button>
+              <h3 className="text-base font-semibold text-foreground">
+                {language === 'zh' ? '选择时间范围' : 'Select Date Range'}
+              </h3>
+              <button
+                onClick={() => {
+                  setFilterStartDate(tempStartDate);
+                  setFilterEndDate(tempEndDate);
+                  setShowDateFilterModal(false);
+                }}
+                className="text-primary hover:text-primary/80 transition-colors font-medium"
+              >
+                {language === 'zh' ? '确定' : 'OK'}
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">
+                  {language === 'zh' ? '起始日期' : 'Start Date'}
+                </label>
+                <button
+                  onClick={() => setShowStartDatePicker(true)}
+                  className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none flex items-center justify-between"
+                >
+                  <span>{tempStartDate || (language === 'zh' ? '选择起始日期' : 'Select start date')}</span>
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div>
+                <label className="text-sm text-muted-foreground mb-2 block">
+                  {language === 'zh' ? '终止日期' : 'End Date'}
+                </label>
+                <button
+                  onClick={() => setShowEndDatePicker(true)}
+                  className="w-full bg-secondary text-foreground rounded-xl px-4 py-3 text-sm outline-none flex items-center justify-between"
+                >
+                  <span>{tempEndDate || (language === 'zh' ? '选择终止日期' : 'Select end date')}</span>
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                </button>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    setTempStartDate('');
+                    setTempEndDate('');
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-secondary text-muted-foreground text-sm"
+                >
+                  {language === 'zh' ? '清除' : 'Clear'}
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                    const startOfYear = new Date(today.getFullYear(), 0, 1);
+                    
+                    setTempStartDate(startOfMonth.toISOString().split('T')[0]);
+                    setTempEndDate(today.toISOString().split('T')[0]);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
+                >
+                  {language === 'zh' ? '本月' : 'This Month'}
+                </button>
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+                    
+                    setTempStartDate(startOfLastMonth.toISOString().split('T')[0]);
+                    setTempEndDate(endOfLastMonth.toISOString().split('T')[0]);
+                  }}
+                  className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
+                >
+                  {language === 'zh' ? '上月' : 'Last Month'}
+                </button>
+              </div>
+            </div>
+
+            <div className="safe-area-bottom" />
+          </div>
+        </div>
+      )}
+
+      <DatePicker
+        open={showStartDatePicker}
+        value={tempStartDate}
+        onChange={(date) => {
+          setTempStartDate(date);
+          setShowStartDatePicker(false);
+        }}
+        onClose={() => setShowStartDatePicker(false)}
+      />
+
+      <DatePicker
+        open={showEndDatePicker}
+        value={tempEndDate}
+        onChange={(date) => {
+          setTempEndDate(date);
+          setShowEndDatePicker(false);
+        }}
+        onClose={() => setShowEndDatePicker(false)}
       />
     </div>
   );
