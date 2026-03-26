@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRates } from '@/lib/exchangeRates';
+import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRatesViaEUR, fetchAllLatestRates, getLatestCachedRate } from '@/lib/exchangeRates';
 import { ArrowRightLeft, ChevronDown } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { translations } from '@/lib/i18n';
@@ -80,7 +80,7 @@ export default function ExchangeRateChart({
   useEffect(() => {
     const days = getPeriodDays(period);
     setIsLoading(true);
-    fetchHistoricalRates(localFromCurrency, localToCurrency, days).finally(() => {
+    fetchHistoricalRatesViaEUR(localFromCurrency, localToCurrency, days).finally(() => {
       setIsLoading(false);
     });
   }, [period, localFromCurrency, localToCurrency]);
@@ -195,7 +195,8 @@ export default function ExchangeRateChart({
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
+              const currentRate = getLatestCachedRate(fromCur, toCur);
+              const displayRate = reversed ? (currentRate ? 1 / currentRate : 0) : currentRate;
               const displayValue = displayRate * 100;
               return (
                 <span className="text-xl font-bold text-foreground">
@@ -252,9 +253,8 @@ export default function ExchangeRateChart({
           </div>
           <div className="flex items-center gap-2">
             {(() => {
-              const displayRate = reversed ? (latestRate ? 1 / latestRate : 0) : latestRate;
-              const fromSymbol = getCurrencySymbol(fromCur);
-              const toSymbol = getCurrencySymbol(toCur);
+              const currentRate = getLatestCachedRate(fromCur, toCur);
+              const displayRate = reversed ? (currentRate ? 1 / currentRate : 0) : currentRate;
               const displayValue = displayRate * 100;
               return (
                 <span className="text-lg font-bold text-foreground">
