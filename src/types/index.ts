@@ -97,7 +97,7 @@ export interface ExchangeRateCache {
 }
 
 export type ThemeMode = 'light' | 'dark';
-export type UIStyle = 'default' | 'glassmorphism' | 'neumorphism' | 'brutalism' | 'memphis' | 'cyberpunk';
+export type UIStyle = 'default' | 'neumorphism' | 'brutalism' | 'cyberpunk';
 
 export interface User {
   id: string;

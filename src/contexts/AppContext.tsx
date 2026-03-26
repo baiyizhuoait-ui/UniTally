@@ -283,7 +283,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const rate = await fetchLatestRate(fromCurrency, toCurrency);
       setLatestRate(rate);
-      await fetchHistoricalRates(fromCurrency, toCurrency, 365);
     } catch (error) {
       console.warn('Failed to refresh exchange rates:', error);
     }

@@ -146,15 +146,6 @@ export default function SettingsModal({ open, onClose }: Props) {
                     {t.settings.defaultStyle || '极简'}
                   </button>
                   <button
-                    onClick={() => app.setUIStyle('glassmorphism')}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
-                      app.uiStyle === 'glassmorphism' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                    }`}
-                  >
-                    <div className="w-4 h-4 rounded bg-gradient-to-br from-white/50 to-white/10 backdrop-blur-sm border border-white/30" />
-                    {t.settings.glassmorphism || '玻璃拟态'}
-                  </button>
-                  <button
                     onClick={() => app.setUIStyle('neumorphism')}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
                       app.uiStyle === 'neumorphism' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
@@ -179,22 +170,6 @@ export default function SettingsModal({ open, onClose }: Props) {
                       <div className="absolute inset-0 bg-black" style={{ clipPath: 'polygon(0 0, 100% 20%, 80% 100%, 10% 80%)' }} />
                     </div>
                     {t.settings.brutalism || '粗野主义'}
-                    {!app.isPremium && <Crown className="w-3 h-3 text-amber-500" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (!app.isPremium) {
-                        setShowUpgrade(true);
-                        return;
-                      }
-                      app.setUIStyle('memphis');
-                    }}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm transition-all ${
-                      app.uiStyle === 'memphis' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'
-                    }`}
-                  >
-                    <div className="w-4 h-4 rounded-lg bg-gradient-to-br from-yellow-400 via-pink-500 to-blue-500" />
-                    {t.settings.memphis || '孟菲斯'}
                     {!app.isPremium && <Crown className="w-3 h-3 text-amber-500" />}
                   </button>
                   <button

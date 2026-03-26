@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
-import { Trash2, X, ChevronDown, Wallet, CreditCard, ArrowRight } from 'lucide-react';
+import { Trash2, X, ChevronDown, Wallet, CreditCard, ArrowRight, Filter } from 'lucide-react';
 import AddTransactionModal from '@/components/AddTransactionModal';
 import CategoryIcon from '@/components/CategoryIcon';
+import WalletIconImg from '@/components/WalletIconImg';
 import { translations } from '@/lib/i18n';
 
-type Filter = 'all' | 'expense' | 'income' | 'transfer';
+type TransactionFilter = 'all' | 'expense' | 'income' | 'transfer';
 
 function formatDateTimeDisplay(datetime: string, language: string): string {
   const date = new Date(datetime);
@@ -25,10 +26,11 @@ export default function TransactionHall() {
   const { transactions, categories, platforms, wallets, t, language } = useApp();
   const tr = translations[language];
   const { deleteTransaction } = useApp();
-  const [filter, setFilter] = useState<Filter>('all');
+  const [filter, setFilter] = useState<TransactionFilter>('all');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedWalletId, setSelectedWalletId] = useState<string | null>(null);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string | null>(null);
+  const [showTypePicker, setShowTypePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showWalletPicker, setShowWalletPicker] = useState(false);
   const [showPlatformPicker, setShowPlatformPicker] = useState(false);
@@ -67,12 +69,17 @@ export default function TransactionHall() {
     grouped[dateKey].push(t);
   }
 
-  const filters: { key: Filter; label: string }[] = [
+  const typeFilters: { key: TransactionFilter; label: string }[] = [
     { key: 'all', label: t.transactionHall.allRecords },
     { key: 'expense', label: t.transactionHall.expenseOnly },
     { key: 'income', label: t.transactionHall.incomeOnly },
     { key: 'transfer', label: language === 'zh' ? '仅转账' : 'Transfers Only' },
   ];
+
+  const getTypeFilterLabel = () => {
+    const found = typeFilters.find(f => f.key === filter);
+    return found ? found.label : t.transactionHall.allRecords;
+  };
 
   const formatDateHeader = (dateStr: string): string => {
     const date = new Date(dateStr);
@@ -108,17 +115,16 @@ export default function TransactionHall() {
       <h2 className="text-2xl font-bold text-foreground mb-5">{t.transactionHall.title}</h2>
 
       <div className="flex gap-2 mb-5 flex-wrap">
-        {filters.map(f => (
-          <button
-            key={f.key}
-            onClick={() => { setFilter(f.key); clearAllFilters(); }}
-            className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 ${
-              filter === f.key && !selectedCategoryId && !selectedWalletId && !selectedPlatformId ? 'bg-primary text-primary-foreground accent-glow' : 'bg-secondary text-muted-foreground hover:bg-muted'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
+        <button
+          onClick={() => setShowTypePicker(true)}
+          className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
+            filter !== 'all' ? 'bg-primary text-primary-foreground accent-glow' : 'bg-secondary text-muted-foreground hover:bg-muted'
+          }`}
+        >
+          <Filter className="w-3.5 h-3.5" />
+          {getTypeFilterLabel()}
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
         <button
           onClick={() => setShowCategoryPicker(true)}
           className={`px-4 py-2 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
@@ -171,6 +177,36 @@ export default function TransactionHall() {
           )}
         </button>
       </div>
+
+      {showTypePicker && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowTypePicker(false)}>
+          <div className="fixed inset-0 bg-foreground/20 backdrop-blur-sm modal-overlay" />
+          <div
+            className="relative w-full sm:max-w-sm max-h-[60vh] flex flex-col glass-card rounded-t-3xl sm:rounded-3xl modal-content overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold text-foreground">{language === 'zh' ? '选择类型' : 'Select Type'}</h3>
+              <button onClick={() => setShowTypePicker(false)} className="p-1.5 rounded-xl hover:bg-secondary transition-colors">
+                <X className="w-5 h-5 text-muted-foreground" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {typeFilters.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => { setFilter(f.key); setShowTypePicker(false); clearAllFilters(); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-colors ${
+                    filter === f.key ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-secondary'
+                  }`}
+                >
+                  <span className="text-sm font-medium text-foreground">{f.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showCategoryPicker && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowCategoryPicker(false)}>
@@ -233,8 +269,12 @@ export default function TransactionHall() {
                     selectedWalletId === w.id ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-secondary'
                   }`}
                 >
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-primary/10">
-                    <Wallet className="w-4 h-4 text-primary" />
+                  <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: (w.color || '#94a3b8') + '20' }}>
+                    {w.icon ? (
+                      <WalletIconImg iconId={w.icon} size={18} />
+                    ) : (
+                      <Wallet className="w-4 h-4" style={{ color: w.color }} />
+                    )}
                   </div>
                   <span className="text-sm font-medium text-foreground">{w.name}</span>
                 </button>
