@@ -1,7 +1,7 @@
 import { STORAGE_KEYS, loadFromStorage, saveToStorage } from './storage';
 import type { ExchangeRateCache } from '@/types';
 
-const API_BASE = 'https://api.frankfurter.app';
+const API_BASE = 'https://open.er-api.com/v6';
 const LATEST_TTL = 3600_000; // 1 hour
 const HISTORICAL_TTL = 86400_000; // 1 day
 
@@ -23,58 +23,46 @@ export async function fetchLatestRate(from: string, to: string): Promise<number>
   if (from === to) return 1;
 
   const key = `${from}_${to}`;
+  const reverseKey = `${to}_${from}`;
   
   if (cache.latest[key] && Date.now() - cache.latestTimestamp < LATEST_TTL) {
     return cache.latest[key][to] || 1;
   }
 
   try {
-    const res = await fetch(`${API_BASE}/latest?from=${from}&to=${to}`);
+    const res = await fetch(`${API_BASE}/latest/${from}`);
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
-    const rate = data.rates[to];
+    
+    if (data.result !== 'success') throw new Error('API returned error');
+    
+    const rates = data.rates;
+    const rate = rates[to];
+    
+    if (!rate) throw new Error('Currency not found');
     
     if (!cache.latest[key]) cache.latest[key] = {};
     cache.latest[key][to] = rate;
     
-    const reverseKey = `${to}_${from}`;
     if (!cache.latest[reverseKey]) cache.latest[reverseKey] = {};
     cache.latest[reverseKey][from] = 1 / rate;
+    
+    for (const [currency, currencyRate] of Object.entries(rates)) {
+      if (!cache.latest[`${from}_${currency}`]) cache.latest[`${from}_${currency}`] = {};
+      cache.latest[`${from}_${currency}`][currency] = currencyRate as number;
+      
+      if (currency !== from) {
+        const revKey = `${currency}_${from}`;
+        if (!cache.latest[revKey]) cache.latest[revKey] = {};
+        cache.latest[revKey][from] = 1 / (currencyRate as number);
+      }
+    }
     
     cache.latestTimestamp = Date.now();
     saveCache();
     return rate;
   } catch {
     return getLatestCachedRate(from, to);
-  }
-}
-
-export async function fetchAllLatestRatesFromEUR(): Promise<Record<string, number>> {
-  try {
-    const res = await fetch(`${API_BASE}/latest?from=EUR`);
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    
-    const eurRates = data.rates;
-    eurRates['EUR'] = 1;
-    
-    for (const [currency, rate] of Object.entries(eurRates)) {
-      const key = `EUR_${currency}`;
-      if (!cache.latest[key]) cache.latest[key] = {};
-      cache.latest[key][currency] = rate as number;
-      
-      const reverseKey = `${currency}_EUR`;
-      if (!cache.latest[reverseKey]) cache.latest[reverseKey] = {};
-      cache.latest[reverseKey]['EUR'] = 1 / (rate as number);
-    }
-    
-    cache.latestTimestamp = Date.now();
-    saveCache();
-    
-    return eurRates;
-  } catch (e) {
-    console.warn('Failed to fetch EUR rates:', e);
-    return {};
   }
 }
 
@@ -97,77 +85,31 @@ export async function fetchHistoricalRates(from: string, to: string, days: numbe
     return;
   }
 
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
-  const start = startDate.toISOString().split('T')[0];
-  const end = endDate.toISOString().split('T')[0];
-
   try {
-    const res = await fetch(`${API_BASE}/${start}..${end}?from=${from}&to=${to}`);
+    const res = await fetch(`${API_BASE}/latest/${from}`);
     if (!res.ok) throw new Error('API error');
     const data = await res.json();
     
-    for (const [date, rates] of Object.entries(data.rates as Record<string, Record<string, number>>)) {
-      if (!cache.historical[date]) cache.historical[date] = {};
-      if (!cache.historical[date][from]) cache.historical[date][from] = {};
-      cache.historical[date][from][to] = rates[to];
+    if (data.result !== 'success') throw new Error('API returned error');
+    
+    const today = new Date().toISOString().split('T')[0];
+    const rates = data.rates;
+    const toRate = rates[to];
+    
+    if (toRate) {
+      if (!cache.historical[today]) cache.historical[today] = {};
+      if (!cache.historical[today][from]) cache.historical[today][from] = {};
+      cache.historical[today][from][to] = toRate;
       
-      if (!cache.historical[date][to]) cache.historical[date][to] = {};
-      cache.historical[date][to][from] = 1 / rates[to];
+      if (!cache.historical[today][to]) cache.historical[today][to] = {};
+      cache.historical[today][to][from] = 1 / toRate;
     }
     
     cache.historicalPair = pairKey;
     cache.historicalTimestamp = Date.now();
     saveCache();
   } catch (e) {
-    console.warn('Direct fetch failed, trying EUR cross rate:', e);
-    await fetchHistoricalRatesViaEUR(from, to, days);
-  }
-}
-
-async function fetchHistoricalRatesViaEUR(from: string, to: string, days: number = 365): Promise<void> {
-  if (from === to) return;
-  if (from === 'EUR' || to === 'EUR') return;
-
-  const endDate = new Date();
-  const startDate = new Date();
-  startDate.setDate(startDate.getDate() - days);
-  
-  const start = startDate.toISOString().split('T')[0];
-  const end = endDate.toISOString().split('T')[0];
-
-  try {
-    const res = await fetch(`${API_BASE}/${start}..${end}?from=EUR&to=${from},${to}`);
-    if (!res.ok) throw new Error('API error');
-    const data = await res.json();
-    
-    for (const [date, rates] of Object.entries(data.rates as Record<string, Record<string, number>>)) {
-      const fromRate = rates[from];
-      const toRate = rates[to];
-      
-      if (fromRate && toRate) {
-        const crossRate = toRate / fromRate;
-        
-        if (!cache.historical[date]) cache.historical[date] = {};
-        if (!cache.historical[date][from]) cache.historical[date][from] = {};
-        cache.historical[date][from][to] = crossRate;
-        
-        if (!cache.historical[date][to]) cache.historical[date][to] = {};
-        cache.historical[date][to][from] = 1 / crossRate;
-        
-        if (!cache.historical[date]['EUR']) cache.historical[date]['EUR'] = {};
-        cache.historical[date]['EUR'][from] = fromRate;
-        cache.historical[date]['EUR'][to] = toRate;
-      }
-    }
-    
-    cache.historicalPair = `${from}_${to}`;
-    cache.historicalTimestamp = Date.now();
-    saveCache();
-  } catch (e) {
-    console.warn('Failed to fetch historical rates via EUR:', e);
+    console.warn('Failed to fetch historical rates:', e);
   }
 }
 
