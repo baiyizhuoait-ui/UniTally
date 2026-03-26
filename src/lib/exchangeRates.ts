@@ -129,7 +129,22 @@ export async function fetchHistoricalRatesViaEUR(from: string, to: string, days:
   if (from === to) return;
   
   if (from === 'EUR' || to === 'EUR') {
-    await fetchHistoricalRates(from === 'EUR' ? 'EUR' : from, to === 'EUR' ? 'EUR' : to, days);
+    const base = from === 'EUR' ? 'EUR' : from;
+    const target = to === 'EUR' ? 'EUR' : to;
+    await fetchHistoricalRates(base, target, days);
+    return;
+  }
+
+  const pairKey = `${from}_${to}`;
+  
+  const dates = Object.keys(cache.historical).sort();
+  const relevantDates = dates.filter(d => {
+    const rate = cache.historical[d]?.[from]?.[to];
+    return rate !== undefined;
+  });
+  const cachedDaysForPair = relevantDates.length;
+  
+  if (cachedDaysForPair >= days * 0.8 && Date.now() - cache.historicalTimestamp < HISTORICAL_TTL) {
     return;
   }
 
@@ -158,10 +173,14 @@ export async function fetchHistoricalRatesViaEUR(from: string, to: string, days:
         
         if (!cache.historical[date][to]) cache.historical[date][to] = {};
         cache.historical[date][to][from] = 1 / crossRate;
+        
+        if (!cache.historical[date]['EUR']) cache.historical[date]['EUR'] = {};
+        cache.historical[date]['EUR'][from] = fromRate;
+        cache.historical[date]['EUR'][to] = toRate;
       }
     }
     
-    cache.historicalPair = `${from}_${to}`;
+    cache.historicalPair = pairKey;
     cache.historicalTimestamp = Date.now();
     saveCache();
   } catch (e) {
@@ -183,7 +202,7 @@ export function getHistoricalRate(from: string, to: string, date: string): numbe
     if (fallbackRate) return fallbackRate;
   }
   
-  return cache.latest[`${from}_${to}`]?.[to] || 1;
+  return getLatestCachedRate(from, to);
 }
 
 export function getLatestCachedRate(from: string, to: string): number {
