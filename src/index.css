@@ -472,6 +472,33 @@
   transform: translateY(0);
 }
 
+[data-ui-style="neumorphism"] .glass-card-hover {
+  background: hsl(var(--neu-bg)) !important;
+  border: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-radius: 1.5rem;
+  box-shadow: 
+    8px 8px 16px hsl(var(--neu-shadow-dark)),
+    -8px -8px 16px hsl(var(--neu-shadow-light)) !important;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+[data-ui-style="neumorphism"] .glass-card-hover:hover {
+  box-shadow: 
+    10px 10px 20px hsl(var(--neu-shadow-dark)),
+    -10px -10px 20px hsl(var(--neu-shadow-light)) !important;
+  transform: translateY(-2px);
+}
+
+[data-ui-style="neumorphism"] .glass-card-hover:active {
+  box-shadow: 
+    inset 4px 4px 8px hsl(var(--neu-shadow-dark)),
+    inset -4px -4px 8px hsl(var(--neu-shadow-light)) !important;
+  transform: translateY(0);
+}
+
 [data-ui-style="neumorphism"] .accent-glow {
   box-shadow: 
     6px 6px 12px hsl(var(--neu-shadow-dark)),

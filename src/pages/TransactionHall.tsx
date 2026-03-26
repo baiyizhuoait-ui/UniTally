@@ -191,12 +191,12 @@ export default function TransactionHall() {
                 <X className="w-5 h-5 text-muted-foreground" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto space-y-1">
+            <div className="flex-1 overflow-y-auto space-y-2">
               {typeFilters.map(f => (
                 <button
                   key={f.key}
                   onClick={() => { setFilter(f.key); setShowTypePicker(false); clearAllFilters(); }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-colors ${
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-left transition-colors ${
                     filter === f.key ? 'bg-primary/10 ring-1 ring-primary' : 'hover:bg-secondary'
                   }`}
                 >

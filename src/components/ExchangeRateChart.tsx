@@ -112,8 +112,6 @@ export default function ExchangeRateChart({
     { key: '1m', label: t.dashboard.periods['1m'] },
     { key: '3m', label: t.dashboard.periods['3m'] },
     { key: '1y', label: t.dashboard.periods['1y'] },
-    { key: '3y', label: t.dashboard.periods['3y'] },
-    { key: '10y', label: t.dashboard.periods['10y'] },
   ];
 
   const CurrencyPicker = ({ 
