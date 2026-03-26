@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import CategoryIcon from '@/components/CategoryIcon';
-import { Sun, Moon, X, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Crown } from 'lucide-react';
+import { Sun, Moon, X, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Crown, Download } from 'lucide-react';
 import AddCategoryModal from './AddCategoryModal';
 import AddPlatformModal from './AddPlatformModal';
 import UpgradeModal from './UpgradeModal';
+import DataExportImport from './DataExportImport';
 import { translations } from '@/lib/i18n';
 
 interface Props {
@@ -12,7 +13,7 @@ interface Props {
   onClose: () => void;
 }
 
-type SettingsTab = 'appearance' | 'platforms' | 'categories';
+type SettingsTab = 'appearance' | 'platforms' | 'categories' | 'data';
 
 export default function SettingsModal({ open, onClose }: Props) {
   const app = useApp();
@@ -29,6 +30,7 @@ export default function SettingsModal({ open, onClose }: Props) {
     { key: 'appearance', label: t.settings.appearance },
     { key: 'platforms', label: t.settings.platforms },
     { key: 'categories', label: t.settings.categories },
+    { key: 'data', label: language === 'zh' ? '数据导出' : 'Data Export' },
   ];
 
   const themeOptions: [string, string, typeof Sun][] = [
@@ -284,6 +286,10 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <span className="text-sm">{language === 'zh' ? '恢复默认分类' : 'Reset to Default Categories'}</span>
               </button>
             </div>
+          )}
+
+          {tab === 'data' && (
+            <DataExportImport />
           )}
         </div>
       </div>
