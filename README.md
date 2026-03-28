@@ -11,7 +11,7 @@ An Accounting book application which supports more than one currency.
 - **Expense Calendar**: Visualize daily spending patterns
 - **Data Dashboard**: View asset trends and category distributions
 - **Multi-language**: Support for Chinese and English
-- **Multiple UI Styles**: Choose from 6 unique interface designs
+- **Multiple UI Styles**: Choose from 4 unique interface designs
 
 ## New Features (Latest Update)
 
@@ -48,13 +48,11 @@ UniTally offers 6 distinct UI styles to personalize your experience:
 
 ### Free Styles
 1. **Minimalist (极简)** - Clean, simple design with focus on content
-2. **Glassmorphism (玻璃拟态)** - Frosted glass effect with blur and transparency
-3. **Neumorphism (新拟态)** - Soft UI with subtle shadows and embossed effects
+2.**Neumorphism (新拟态)** - Soft UI with subtle shadows and embossed effects
 
 ### Premium Styles (Paid Feature)
-4. **Brutalism (粗野主义)** - Bold, high-contrast design with thick borders and sharp edges
-5. **Memphis (孟菲斯)** - Playful, colorful design with geometric shapes and vibrant colors
-6. **Cyberpunk (赛博朋克)** - Neon-lit futuristic design with flowing gradients and glow effects
+3. **Brutalism (粗野主义)** - Bold, high-contrast design with thick borders and sharp edges
+4. **Cyberpunk (赛博朋克)** - Neon-lit futuristic design with flowing gradients and glow effects
 
 ## Premium Features
 
