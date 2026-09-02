@@ -1,78 +1,82 @@
 # UniTally
 
-An Accounting book application which supports more than one currency.
+An accounting book application that supports multiple currencies.
+
+UniTally helps you track income and expenses across different currencies with real-time exchange rates, manage wallets, set budgets, track subscriptions, and visualize your spending — all in a clean, customizable interface.
+
+> 📋 See [CHANGELOG.md](CHANGELOG.md) for the full update history.
 
 ## Features
 
-- **Multi-currency Support**: Track expenses in multiple currencies with real-time exchange rates
-- **Wallet Management**: Create and manage multiple wallets with custom icons and colors
-- **Transaction Tracking**: Record income and expenses with categories and notes
-- **Budget Center**: Set budgets and track subscription services
-- **Expense Calendar**: Visualize daily spending patterns
-- **Data Dashboard**: View asset trends and category distributions
-- **Multi-language**: Support for Chinese and English
-- **Multiple UI Styles**: Choose from 4 unique interface designs
+### Multi-Currency Accounting
+- Track income and expenses in **27 supported currencies**
+- Real-time exchange rates with automatic cross-rate calculation for all currency pairs
+- Each currency has a distinct color based on its largest denomination banknote
+- Cross-currency transfers with separate amount fields per currency
 
-## New Features (Latest Update)
+### Wallet Management
+- Create and manage multiple wallets with custom icons and colors
+- Wallet types: **Cash**, **Savings**, **Credit Card**, and **E-Wallet**
+- Cash wallets are automatically created for your selected currencies during setup
+- Credit cards display available credit (limit + balance) instead of current balance
+- Wallet picker groups options by type
+- Click any wallet to view an expense breakdown by category, filterable by time range (Today, This Week, This Month, This Year, All Time) with pie charts
 
-### Wallet Classification System
-- **Default Cash Accounts**: Automatically creates cash wallets for all selected currencies during setup
-- **Wallet Types**: Organized by Cash, Savings, Credit Card, and E-Wallet
-- **Credit Card Logic**: Displays available credit (limit + balance) instead of current balance
-- **Grouped Wallet Selector**: Wallet picker shows options grouped by type
+### Transaction Tracking
+- Record income and expenses with categories, notes, and timestamps
+- Dedicated **transfer** tab for moving money between wallets (transfers are excluded from expense statistics)
+- Filter by type, category, wallet, and platform
+- 15 built-in categories (Food, Transport, Shopping, Housing, Entertainment, Medical, Education, Grocery, Drink, Fitness, Gift, Telecom, Clothing, Social, Other) — fully customizable
+- Transfer-only filter in the transaction hall
 
-### Wallet Statistics & Editing
-- **Edit Wallet**: Modify all wallet properties in management mode
-- **Wallet Statistics**: Click any wallet to view expense breakdown by category
-- **Time Range Filter**: View statistics for Today, This Week, This Month, This Year, or All Time
-- **Pie Chart Visualization**: Beautiful category distribution charts
+### Budget Center
+- Set budgets with amount, category, date range, and notes
+- Visual progress tracking with spent / remaining / over-budget states
+- **Subscription tracking** with providers, billing cycles, and amounts
 
-### Transfer System
-- **Transfer Tab**: Dedicated tab for transfers in transaction modal
-- **Cross-Currency Transfer**: Automatically detects different currencies and shows separate input fields
-- **Data Isolation**: Transfers are excluded from expense calendar and data dashboard
-- **Transfer Filter**: "Transfers Only" button in transaction hall
+### Analytics & Visualization
+- **Data Dashboard**: total assets, monthly income/expense, asset trends, and category distribution charts
+- **Expense Calendar**: visualize daily spending patterns with daily breakdowns and monthly stats
+- **Exchange rate chart** with historical periods
 
-### Enhanced Categories
-- **New Categories**: Drink (饮料), Fitness (健身), Gift (礼品)
-- **Removed Transfer Category**: Transfer is now a separate transaction type
-- **Auto-Sync**: Existing users automatically receive new categories
+### Data Management
+- Data **export** (JSON) and **import** (premium)
+- Email verification and password recovery (forgot / reset password)
 
-### Currency Colors
-- **31 Currency Colors**: Each currency has a primary color based on its largest denomination banknote
-- **Auto-Color Wallets**: New cash wallets automatically use the corresponding currency color
+### Customization
+- Light / dark themes with 6 accent colors
+- **4 UI styles**: Minimalist, Neumorphism, Brutalism, Cyberpunk
+- Bilingual interface (Chinese / English)
+- Custom avatar, book name, and notification center (credit card due reminders)
 
 ## UI Styles
 
-UniTally offers 6 distinct UI styles to personalize your experience:
+| Style | Description | Availability |
+|---|---|---|
+| Minimalist (极简) | Clean, simple design focused on content | Free |
+| Neumorphism (新拟态) | Soft UI with subtle shadows and embossed effects | Free |
+| Brutalism (粗野主义) | Bold, high-contrast design with thick borders and sharp edges | Premium |
+| Cyberpunk (赛博朋克) | Neon-lit futuristic design with flowing gradients and glow effects | Premium |
 
-### Free Styles
-1. **Minimalist (极简)** - Clean, simple design with focus on content
-2.**Neumorphism (新拟态)** - Soft UI with subtle shadows and embossed effects
+## Pricing Plans
 
-### Premium Styles (Paid Feature)
-3. **Brutalism (粗野主义)** - Bold, high-contrast design with thick borders and sharp edges
-4. **Cyberpunk (赛博朋克)** - Neon-lit futuristic design with flowing gradients and glow effects
+| Feature | Free | Premium |
+|---|---|---|
+| Wallets | 3 | Unlimited |
+| Transactions / month | 100 | Unlimited |
+| Budgets | 3 | Unlimited |
+| Subscription tracking | 3 | Unlimited |
+| Data export | ✗ | ✓ |
+| Premium UI styles | ✗ | ✓ |
 
-## Premium Features
+Premium: **$2.99/month** · **$29.99/quarter** · **$35.99/lifetime**
 
-Upgrade to premium to unlock:
-- Unlimited wallets
-- Unlimited transactions
-- Data export functionality
-- Unlimited budgets
-- Unlimited subscription tracking
-- Premium UI styles (Brutalism, Memphis, Cyberpunk)
+## Quick Start (Windows, one-click)
 
-## Tech Stack
+1. Double-click **`一键启动.bat`** — it checks Node.js, installs dependencies if needed, starts the backend (port 5000) and frontend (port 8080), then opens the browser automatically.
+2. Double-click **`停止服务.bat`** to stop all services and close the server windows.
 
-- **Frontend**: React + TypeScript + Vite
-- **UI**: shadcn-ui + Tailwind CSS
-- **Backend**: Node.js + Express
-- **Auth**: Firebase Authentication + Email verification
-- **Email**: Brevo SMTP
-
-## Getting Started
+## Getting Started (Manual)
 
 ### Prerequisites
 
@@ -84,8 +88,6 @@ Upgrade to premium to unlock:
 ```bash
 # Clone the repository
 git clone https://github.com/baiyizhuoait-ui/UniTally.git
-
-# Navigate to project directory
 cd UniTally
 
 # Install frontend dependencies
@@ -94,10 +96,10 @@ npm install
 # Install backend dependencies
 cd backend && npm install
 
-# Start backend server
+# Start backend server (port 5000)
 npm start
 
-# In another terminal, start frontend
+# In another terminal, start frontend (port 8080)
 cd .. && npm run dev
 ```
 
@@ -106,6 +108,27 @@ cd .. && npm run dev
 1. Copy `.env.example` to `.env` and fill in your credentials
 2. Configure Firebase credentials for authentication
 3. Set up Brevo SMTP for email verification
+
+## Project Structure
+
+```
+├── src/          # Frontend (React + TypeScript + Vite)
+│   ├── components/   # UI components & feature modals
+│   ├── contexts/     # App & subscription state
+│   ├── lib/          # Utilities (currencies, i18n, plans, storage)
+│   └── pages/        # Application pages
+├── backend/      # Backend API (Node.js + Express)
+├── functions/    # Firebase Cloud Functions
+└── public/       # Static assets
+```
+
+## Tech Stack
+
+- **Frontend**: React + TypeScript + Vite
+- **UI**: shadcn-ui + Tailwind CSS
+- **Backend**: Node.js + Express
+- **Auth**: Firebase Authentication + email verification
+- **Email**: Brevo SMTP
 
 ## License
 
