@@ -1,9 +1,10 @@
 import { User } from '@/types';
 import { STORAGE_KEYS, saveToStorage, loadFromStorage } from './storage';
 import { signInWithGoogle, getIdToken } from './firebase';
+import { API_BASE } from './api';
 
 class AuthService {
-  private baseUrl = 'http://localhost:5000/api/auth';
+  private baseUrl = `${API_BASE}/api/auth`;
 
   async login(email: string, password: string): Promise<{ user: User; token: string }> {
     const response = await fetch(`${this.baseUrl}/login`, {

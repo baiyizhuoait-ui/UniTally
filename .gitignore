@@ -30,6 +30,10 @@ dist-ssr
 backend/.env
 functions/.env
 
+# Local persistence data file (may contain password hashes)
+backend/data/
+backend/db.json
+
 # Firebase credentials
 firebase-credentials.json
 *.pem
@@ -48,6 +52,9 @@ vite.config.ts.timestamp-*.mjs
 # OS files
 Thumbs.db
 .DS_Store
+
+# WorkBuddy session data
+.workbuddy/
 
 # IDE
 *.iml

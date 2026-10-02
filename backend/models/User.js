@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { saveDb } = require('../db');
 
 // User class for in-memory storage
 class User {
@@ -35,13 +36,17 @@ class User {
 const UserModel = {
   // Find user by email
   findOne: async function(db, query) {
+    let user = null;
     if (query.email) {
-      return db.users.find(user => user.email === query.email.toLowerCase());
+      user = db.users.find((u) => u.email === query.email.toLowerCase());
+    } else if (query._id) {
+      user = db.users.find((u) => u.id === query._id);
     }
-    if (query._id) {
-      return db.users.find(user => user.id === query._id);
+    // Rehydrate plain (file-loaded) objects into User instances so methods work.
+    if (user && !(user instanceof User)) {
+      Object.setPrototypeOf(user, User.prototype);
     }
-    return null;
+    return user;
   },
 
   // Create new user
@@ -49,6 +54,7 @@ const UserModel = {
     const user = new User(data);
     await user.hashPassword();
     db.users.push(user);
+    saveDb(db);
     return user;
   },
 
@@ -60,15 +66,17 @@ const UserModel = {
       if (update.password) {
         await user.hashPassword();
       }
+      saveDb(db);
     }
     return user;
   },
 
   // Delete user
   delete: async function(db, query) {
-    const index = db.users.findIndex(user => user.email === query.email.toLowerCase());
+    const index = db.users.findIndex((user) => user.email === query.email.toLowerCase());
     if (index > -1) {
       db.users.splice(index, 1);
+      saveDb(db);
       return true;
     }
     return false;

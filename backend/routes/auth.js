@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
+const rateLimit = require('express-rate-limit');
 const UserModel = require('../models/User');
+const { saveDb } = require('../db');
 const { generateToken, sendEmail, generateVerificationToken, generateResetPasswordToken } = require('../utils/auth');
 
 let firebaseInitialized = false;
@@ -24,9 +26,39 @@ try {
   console.log('Firebase Admin initialization error:', error.message);
 }
 
+// Fail-closed startup guard: in production, Firebase Admin MUST be initialized.
+if (process.env.NODE_ENV === 'production' && !firebaseInitialized) {
+  console.error(
+    'FATAL: NODE_ENV=production but Firebase Admin is not initialized. ' +
+    'Refusing to start (auth would be open to anyone). Configure FIREBASE_* env vars.'
+  );
+  process.exit(1);
+}
+
+// Rate limiters (per IP) to mitigate brute-force / abuse.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again later' },
+});
+
+const codeLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many code requests, please try again later' },
+});
+
 async function verifyFirebaseToken(idToken) {
   if (!firebaseInitialized) {
-    console.log('Firebase not initialized, skipping token verification');
+    // Fail-closed: in production we must never skip token verification.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Firebase admin not initialized');
+    }
+    console.warn('[DEV ONLY] Firebase not initialized, token verification skipped');
     return null;
   }
   try {
@@ -41,7 +73,7 @@ async function verifyFirebaseToken(idToken) {
 // @route   POST /api/auth/send-verification-code
 // @desc    Send verification code to email
 // @access  Public
-router.post('/send-verification-code', async (req, res) => {
+router.post('/send-verification-code', codeLimiter, async (req, res) => {
   const { email } = req.body;
   const db = req.db;
 
@@ -57,6 +89,7 @@ router.post('/send-verification-code', async (req, res) => {
       db.verificationCodes = {};
     }
     db.verificationCodes[email] = { code, expiresAt };
+    saveDb();
 
     console.log(`[验证码] 邮箱: ${email}, 验证码: ${code}`);
 
@@ -83,7 +116,7 @@ router.post('/send-verification-code', async (req, res) => {
     res.json({ 
       success: true, 
       message: 'Verification code sent',
-      devCode: process.env.NODE_ENV === 'development' ? code : undefined
+      devCode: process.env.ALLOW_DEV_CODE === 'true' ? code : undefined
     });
   } catch (error) {
     console.error('Send verification code error:', error.message);
@@ -94,7 +127,7 @@ router.post('/send-verification-code', async (req, res) => {
 // @route   POST /api/auth/verify-code
 // @desc    Verify email code
 // @access  Public
-router.post('/verify-code', async (req, res) => {
+router.post('/verify-code', codeLimiter, async (req, res) => {
   const { email, code } = req.body;
   const db = req.db;
 
@@ -111,6 +144,7 @@ router.post('/verify-code', async (req, res) => {
 
     if (storedData.expiresAt < Date.now()) {
       delete db.verificationCodes[email];
+      saveDb();
       return res.status(400).json({ error: 'Verification code expired' });
     }
 
@@ -130,7 +164,7 @@ router.post('/verify-code', async (req, res) => {
 // @route   POST /api/auth/register
 // @desc    Register user with email and password
 // @access  Public
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   const { name, email, password } = req.body;
   const db = req.db;
 
@@ -194,7 +228,7 @@ router.post('/register', async (req, res) => {
 // @route   POST /api/auth/login
 // @desc    Login user with email and password
 // @access  Public
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   const { email, password } = req.body;
   const db = req.db;
 
@@ -232,7 +266,7 @@ router.post('/login', async (req, res) => {
 // @route   POST /api/auth/firebase
 // @desc    Login with Firebase (Google, etc.)
 // @access  Public
-router.post('/firebase', async (req, res) => {
+router.post('/firebase', authLimiter, async (req, res) => {
   const { idToken } = req.body;
   const db = req.db;
 
@@ -240,7 +274,7 @@ router.post('/firebase', async (req, res) => {
     const decodedToken = await verifyFirebaseToken(idToken);
     
     if (!decodedToken) {
-      if (process.env.NODE_ENV === 'development' || !firebaseInitialized) {
+      if (process.env.NODE_ENV === 'development') {
         const { email, name, picture, uid } = req.body;
         
         if (!email) {
@@ -333,7 +367,7 @@ router.post('/firebase', async (req, res) => {
 // @route   POST /api/auth/google
 // @desc    Login with Google (legacy, redirects to firebase)
 // @access  Public
-router.post('/google', async (req, res) => {
+router.post('/google', authLimiter, async (req, res) => {
   const { credential } = req.body;
   const db = req.db;
 
@@ -341,7 +375,7 @@ router.post('/google', async (req, res) => {
     const decodedToken = await verifyFirebaseToken(credential);
     
     if (!decodedToken) {
-      if (process.env.NODE_ENV === 'development' || !firebaseInitialized) {
+      if (process.env.NODE_ENV === 'development') {
         const { email, name, picture } = req.body;
         
         if (!email) {
@@ -457,7 +491,7 @@ router.get('/verify-email', async (req, res) => {
 // @route   POST /api/auth/forgot-password
 // @desc    Send reset password email
 // @access  Public
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', authLimiter, async (req, res) => {
   const { email } = req.body;
   const db = req.db;
 
