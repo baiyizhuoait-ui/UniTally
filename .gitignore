@@ -42,6 +42,9 @@ build/
 .cache
 *.tsbuildinfo
 
+# Vite 崩溃时留下的临时配置快照
+vite.config.ts.timestamp-*.mjs
+
 # OS files
 Thumbs.db
 .DS_Store
