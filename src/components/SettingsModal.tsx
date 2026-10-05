@@ -30,7 +30,7 @@ export default function SettingsModal({ open, onClose }: Props) {
     { key: 'appearance', label: t.settings.appearance },
     { key: 'platforms', label: t.settings.platforms },
     { key: 'categories', label: t.settings.categories },
-    { key: 'data', label: language === 'zh' ? '数据导出' : 'Data Export' },
+    { key: 'data', label: language === 'zh' ? '数据处理' : 'Data Management' },
   ];
 
   const themeOptions: [string, string, typeof Sun][] = [

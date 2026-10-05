@@ -1,12 +1,27 @@
 # UniTally
 
-An accounting book application that supports multiple currencies.
+An AI-powered accounting book that supports multiple currencies.
 
-UniTally helps you track income and expenses across different currencies with real-time exchange rates, manage wallets, set budgets, track subscriptions, and visualize your spending — all in a clean, customizable interface.
+UniTally helps you track income and expenses across different currencies with real-time exchange rates, manage wallets, set budgets, track subscriptions, and visualize your spending — now with a full **AI accounting suite**: one-line transaction entry, smart paste detection, bill screenshot recognition, batch file import, and personalized spending insights. Bring your own key (BYOK) or run models locally — your financial data stays under your control.
 
 > 📋 See [CHANGELOG.md](CHANGELOG.md) for the full update history.
+>
+> 🤖 The AI accounting suite is being rolled out on the [`feature/ai-accounting`](https://github.com/baiyizhuoait-ui/UniTally/tree/feature/ai-accounting) branch — pending merge into main.
 
 ## Features
+
+### 🤖 AI Accounting Suite (on the `feature/ai-accounting` branch)
+
+- **One-line entry** — type "昨天在泰国花了500株" and get a structured transaction (date, amount, THB, category) prefilled for confirmation
+- **Two-stage parsing** — deterministic rule fast-path (regex + keyword categorization) handles the obvious cases with zero API cost; the LLM only sees ambiguous input
+- **Smart paste detection** — copy a bill from WeChat/Alipay anywhere and the app asks if you want to import it; silent while you're pasting into a form
+- **Bill screenshot recognition** — paste or upload a payment screenshot, a vision model (default: free GLM-4V-Flash) extracts every transaction; review with **inline editing** of type, merchant, datetime, amount, and category before importing
+- **Batch file import** — upload WeChat/Alipay CSV bills, auto-categorized with duplicate fingerprints (same day + amount + type)
+- **AI insights** — spending statistics and summaries with a rule-based fallback when no model is configured
+- **Feedback loop** — your corrections are remembered and injected as few-shot examples, so parsing adapts to your habits
+- **Three modes, honest status line** — Rule mode (no AI) / Cloud (BYOK) / Local (Ollama); the status badge reflects *verified* connectivity (local Ollama is health-checked, offline models never show a fake "connected" state)
+- **27-currency awareness** — amount expressions in Chinese and English (¥ $ € £ ฿ ₩ 美元 ringgit baht rupiah…) map to correct ISO codes; unrecognized currencies fall back to your base currency instead of polluting records
+- **Privacy by design** — BYOK direct connection (your key, your quota, stored only in localStorage) or a local Ollama model; a platform proxy with daily quota is available for quick starts
 
 ### Multi-Currency Accounting
 - Track income and expenses in **27 supported currencies**
@@ -20,13 +35,13 @@ UniTally helps you track income and expenses across different currencies with re
 - Cash wallets are automatically created for your selected currencies during setup
 - Credit cards display available credit (limit + balance) instead of current balance
 - Wallet picker groups options by type
-- Click any wallet to view an expense breakdown by category, filterable by time range (Today, This Week, This Month, This Year, All Time) with pie charts
+- Click any wallet to view an expense breakdown by category, filterable by time range with pie charts
 
 ### Transaction Tracking
 - Record income and expenses with categories, notes, and timestamps
 - Dedicated **transfer** tab for moving money between wallets (transfers are excluded from expense statistics)
 - Filter by type, category, wallet, and platform
-- 15 built-in categories (Food, Transport, Shopping, Housing, Entertainment, Medical, Education, Grocery, Drink, Fitness, Gift, Telecom, Clothing, Social, Other) — fully customizable
+- 15 built-in categories — fully customizable
 - Transfer-only filter in the transaction hall
 
 ### Budget Center
@@ -49,6 +64,17 @@ UniTally helps you track income and expenses across different currencies with re
 - Bilingual interface (Chinese / English)
 - Custom avatar, book name, and notification center (credit card due reminders)
 
+## AI Configuration
+
+| Mode | Requirement | Notes |
+|---|---|---|
+| Rule mode | None | Regex + keyword parsing, always available, zero cost |
+| Cloud (BYOK) | An OpenAI-compatible API key (default: [Zhipu GLM-4V-Flash](https://open.bigmodel.cn/), free) | Key stored in localStorage only; requests go directly to the provider |
+| Local | [Ollama](https://ollama.com/) with any chat model | 100% offline; connectivity and installed models are health-checked |
+| Platform proxy | Sign in | Free daily quota, no key management |
+
+Screenshot recognition requires a **vision** model (text-only models like DeepSeek cannot read images).
+
 ## UI Styles
 
 | Style | Description | Availability |
@@ -66,7 +92,7 @@ UniTally helps you track income and expenses across different currencies with re
 | Transactions / month | 100 | Unlimited |
 | Budgets | 3 | Unlimited |
 | Subscription tracking | 3 | Unlimited |
-| Data export | ✗ | ✓ |
+| Data management (export/import) | ✗ | ✓ |
 | Premium UI styles | ✗ | ✓ |
 
 Premium: **$2.99/month** · **$29.99/quarter** · **$35.99/lifetime**
@@ -105,21 +131,21 @@ cd .. && npm run dev
 
 ### Configuration
 
-1. Copy `.env.example` to `.env` and fill in your credentials
+1. Copy `backend/.env.example` to `backend/.env` and fill in your credentials
 2. Configure Firebase credentials for authentication
 3. Set up Brevo SMTP for email verification
 
 ## Project Structure
 
 ```
-├── src/          # Frontend (React + TypeScript + Vite)
-│   ├── components/   # UI components & feature modals
+├── src/              # Frontend (React + TypeScript + Vite)
+│   ├── components/   # UI components & feature modals (incl. AI quick input, screenshot modal)
 │   ├── contexts/     # App & subscription state
-│   ├── lib/          # Utilities (currencies, i18n, plans, storage)
+│   ├── lib/          # Utilities (currencies, i18n, plans, storage, aiParse, aiConfig, billImport)
 │   └── pages/        # Application pages
-├── backend/      # Backend API (Node.js + Express)
-├── functions/    # Firebase Cloud Functions
-└── public/       # Static assets
+├── backend/          # Backend API (Node.js + Express)
+├── functions/        # Firebase Cloud Functions
+└── public/           # Static assets
 ```
 
 ## Tech Stack
@@ -129,6 +155,7 @@ cd .. && npm run dev
 - **Backend**: Node.js + Express
 - **Auth**: Firebase Authentication + email verification
 - **Email**: Brevo SMTP
+- **AI (on the `feature/ai-accounting` branch)**: OpenAI-compatible BYOK / Ollama / platform proxy, with a deterministic rule engine fallback
 
 ## License
 
