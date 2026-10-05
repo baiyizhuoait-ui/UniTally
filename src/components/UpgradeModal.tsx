@@ -62,7 +62,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
   const features = [
     { icon: Wallet, zh: '无限钱包数量', en: 'Unlimited Wallets' },
     { icon: Calendar, zh: '无限交易记录', en: 'Unlimited Transactions' },
-    { icon: Download, zh: '数据导出功能', en: 'Data Export' },
+    { icon: Download, zh: '数据处理功能', en: 'Data Management' },
     { icon: InfinityIcon, zh: '无限预算项目', en: 'Unlimited Budgets' },
     { icon: Star, zh: '无限订阅追踪', en: 'Unlimited Subscriptions' },
     { icon: Zap, zh: '高级UI风格', en: 'Premium UI Styles' },

@@ -62,8 +62,8 @@ export const FEATURE_DESCRIPTIONS = {
     en: 'Monthly Transactions',
   },
   exportEnabled: {
-    zh: '数据导出',
-    en: 'Data Export',
+    zh: '数据处理',
+    en: 'Data Management',
   },
   budgetLimit: {
     zh: '预算项目上限',

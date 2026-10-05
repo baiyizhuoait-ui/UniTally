@@ -6,7 +6,7 @@ import { Sparkles, Loader2, X, Zap } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { API_BASE } from '@/lib/api';
-import { loadAiConfig, loadAiParseMode } from '@/lib/aiConfig';
+import { loadAiConfig, loadAiParseMode, testConnection } from '@/lib/aiConfig';
 import { loadFeedbacks } from '@/lib/aiFeedback';
 import { STORAGE_KEYS, loadFromStorage } from '@/lib/storage';
 import {
@@ -77,6 +77,7 @@ export async function parseAndRoute(
 type ChannelStatus =
   | { kind: 'rule' }
   | { kind: 'direct'; model: string }
+  | { kind: 'direct_down' }
   | { kind: 'proxy'; remaining: number | null };
 
 export default function AiQuickInput({ open, onClose, onManual, onRejected, onParsed, onBatchImport, onScreenshot }: Props): JSX.Element | null {
@@ -117,9 +118,19 @@ export default function AiQuickInput({ open, onClose, onManual, onRejected, onPa
     const seq = ++statusSeq.current;
     const config = loadAiConfig(user.id);
     const channel = resolveChannel(config);
-    if (channel === 'byok_cloud' || channel === 'local_ollama') {
+    if (channel === 'byok_cloud') {
+      // 云端有 Key 即按 PRD 显示直连状态；真实连通性由解析结果反馈
       setStatus({ kind: 'direct', model: config?.model || '' });
       return undefined;
+    }
+    if (channel === 'local_ollama' && config) {
+      // 本地 Ollama 必须真实探活：服务没开时不得显示"直连"假状态（探活为本地免费请求）
+      void testConnection(config).then(result => {
+        if (seq !== statusSeq.current) return;
+        if (result.ok) setStatus({ kind: 'direct', model: config.model || '' });
+        else setStatus({ kind: 'direct_down' });
+      });
+      return () => { statusSeq.current++; };
     }
     if (channel === 'proxy') {
       const authToken = loadFromStorage<string | null>(STORAGE_KEYS.AUTH_TOKEN, null);
@@ -185,6 +196,7 @@ export default function AiQuickInput({ open, onClose, onManual, onRejected, onPa
 
   const statusLabel = (() => {
     if (status.kind === 'rule') return t.ai.ruleModeBadge;
+    if (status.kind === 'direct_down') return t.ai.directDownBadge;
     if (status.kind === 'direct') return t.ai.byokBadge.replace('{model}', status.model || '-');
     return t.ai.proxyBadge.replace('{n}', status.remaining === null ? '–' : String(status.remaining));
   })();
@@ -280,7 +292,11 @@ export default function AiQuickInput({ open, onClose, onManual, onRejected, onPa
         )}
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground" title={tr.ai.ruleModeHint}>
-          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${status.kind === 'rule' ? 'bg-muted-foreground/50' : 'bg-income'}`} />
+          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+            status.kind === 'rule' ? 'bg-muted-foreground/50'
+              : status.kind === 'direct_down' ? 'bg-amber-500'
+              : 'bg-income'
+          }`} />
           <span className="truncate">{statusLabel}</span>
         </div>
       </div>
