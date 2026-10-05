@@ -1,17 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
-import type { Transaction } from '@/types';
+import type { Transaction, AiPrefill } from '@/types';
 import { getCurrencySymbol } from '@/lib/currencies';
+import { mapAiPrefill } from '@/lib/aiPrefill';
+import { diffPrefill, addFeedback } from '@/lib/aiFeedback';
 import CategoryIcon from '@/components/CategoryIcon';
 import DateTimePicker from '@/components/DateTimePicker';
 import OptionPicker from '@/components/OptionPicker';
 import { translations } from '@/lib/i18n';
-import { ChevronDown, Check, ArrowRight } from 'lucide-react';
+import { ChevronDown, Check, ArrowRight, AlertTriangle } from 'lucide-react';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   editTransaction?: Transaction | null;
+  prefill?: AiPrefill | null;
 }
 
 function formatDateTimeLocal(date: Date): string {
@@ -35,8 +38,8 @@ function formatDateTimeDisplay(datetime: string, language: string): string {
   return `${month}/${day} ${hours}:${minutes}`;
 }
 
-export default function AddTransactionModal({ open, onClose, editTransaction }: Props) {
-  const { wallets, categories, platforms, currencies, primaryCurrency, t, language, addTransaction, updateTransaction } = useApp();
+export default function AddTransactionModal({ open, onClose, editTransaction, prefill }: Props) {
+  const { user, wallets, categories, platforms, currencies, primaryCurrency, t, language, addTransaction, updateTransaction } = useApp();
   const tr = translations[language];
 
   const [tab, setTab] = useState<'expense' | 'income' | 'transfer'>('expense');
@@ -61,11 +64,14 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
   
   const amountInputRef = useRef<HTMLInputElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  // 预填包 ref：handleSubmit 时做 diff 反馈（渲染用 prop，提交用 ref）
+  const prefillRef = useRef<AiPrefill | null>(null);
 
   const otherCurrencies = currencies.slice(1);
 
   useEffect(() => {
     if (editTransaction) {
+      prefillRef.current = null; // editTransaction 与 prefill 互斥
       if (editTransaction.type === 'transfer') {
         setTab('transfer');
         setFromWalletId(editTransaction.fromWalletId || '');
@@ -82,7 +88,27 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
       }
       setDatetime(editTransaction.datetime);
       setNote(editTransaction.note);
+    } else if (prefill) {
+      // ---- AI 预填分支（仅新建模式生效） ----
+      prefillRef.current = prefill;
+      // 纯映射（src/lib/aiPrefill.ts，QA 第 1 轮 Bug #1 修复）：
+      // transfer 双钱包成功分支的 from/to/金额不再被末尾的默认初始化无条件覆盖
+      const s = mapAiPrefill(prefill, wallets, currencies, primaryCurrency);
+      setTab(s.tab);
+      setAmount(s.amount);
+      setCurrency(s.currency);
+      setWalletId(s.walletId);
+      setCategory(s.category);
+      setFromWalletId(s.fromWalletId);
+      setToWalletId(s.toWalletId);
+      setFromAmount(s.fromAmount);
+      setToAmount(s.toAmount);
+      const r = prefill.result;
+      setPlatformId(platforms[0]?.id || '');
+      setDatetime(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(r.datetime) ? r.datetime : formatDateTimeLocal(new Date()));
+      setNote([r.merchant, r.note].filter(Boolean).join(' '));
     } else {
+      prefillRef.current = null;
       setTab('expense');
       setAmount('');
       setCurrency(primaryCurrency);
@@ -97,7 +123,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
       setToAmount('');
     }
     setShowCurrencyPicker(false);
-  }, [editTransaction, open, primaryCurrency, wallets, platforms]);
+  }, [editTransaction, prefill, open, primaryCurrency, wallets, platforms, currencies]);
 
   useEffect(() => {
     if (open && !editTransaction) {
@@ -117,6 +143,29 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
   };
 
   const handleSubmit = () => {
+    // 统一提交：prefill 存在（仅新建）时附加 source:'ai' + aiMeta，并按 diff 写反馈记录
+    const commit = (
+      data: Omit<Transaction, 'id' | 'createdAt'>,
+      submitted: { category: string; walletId: string; type: string }
+    ) => {
+      const p = prefillRef.current;
+      if (editTransaction) {
+        updateTransaction({ ...editTransaction, ...data });
+        return;
+      }
+      if (p) {
+        const fb = diffPrefill(p, submitted, wallets);
+        if (fb && user) addFeedback(user.id, fb);
+        addTransaction({
+          ...data,
+          source: 'ai',
+          aiMeta: { confidence: p.result.confidence, rawInput: p.rawInput, corrected: fb !== null },
+        });
+        return;
+      }
+      addTransaction(data);
+    };
+
     if (tab === 'transfer') {
       const fromAmt = parseFloat(fromAmount);
       const toAmt = parseFloat(toAmount);
@@ -142,11 +191,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
         toCurrency: toWallet?.currency,
       };
 
-      if (editTransaction) {
-        updateTransaction({ ...editTransaction, ...data });
-      } else {
-        addTransaction(data);
-      }
+      commit(data, { category: 'transfer', walletId: fromWalletId, type: 'transfer' });
     } else {
       const amt = parseFloat(amount);
       if (!amt || amt < 0 || !walletId || !platformId || (tab === 'expense' && !category)) return;
@@ -157,11 +202,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
         datetime, note,
       };
 
-      if (editTransaction) {
-        updateTransaction({ ...editTransaction, ...data });
-      } else {
-        addTransaction(data);
-      }
+      commit(data, { category: tab === 'income' ? 'income' : category, walletId, type: tab });
     }
     onClose();
   };
@@ -236,6 +277,13 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
   const toWallet = wallets.find(w => w.id === toWalletId);
   const isCrossCurrency = fromWallet && toWallet && fromWallet.currency !== toWallet.currency;
 
+  // 低置信高亮（confidence < 0.7）：顶部黄条 + 可疑字段黄色 ring
+  const activePrefill = !editTransaction ? prefill : null;
+  const lowConfidence = !!activePrefill && activePrefill.result.confidence < 0.7;
+  const lcFields = activePrefill?.result.lowConfidenceFields ?? [];
+  const hasLc = (f: string) => lowConfidence && lcFields.includes(f);
+  const LC_RING = 'ring-2 ring-amber-400';
+
   const CurrencySelector = () => {
     if (currencies.length >= 3) {
       return (
@@ -306,7 +354,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
           </label>
           <button
             onClick={() => setShowFromWalletPicker(true)}
-            className="w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2"
+            className={`w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2 ${hasLc('wallet') ? LC_RING : ''}`}
           >
             {fromWallet && (
               <>
@@ -331,7 +379,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
           </label>
           <button
             onClick={() => setShowToWalletPicker(true)}
-            className="w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2"
+            className={`w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2 ${hasLc('wallet') ? LC_RING : ''}`}
           >
             {toWallet && (
               <>
@@ -443,7 +491,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
           min="0"
           placeholder="0.00"
           autoFocus
-          className="text-4xl font-bold bg-transparent border-none outline-none w-full text-foreground placeholder:text-muted"
+          className={`text-4xl font-bold bg-transparent border-none outline-none w-full text-foreground placeholder:text-muted rounded-xl ${hasLc('amount') ? LC_RING : ''}`}
         />
       </div>
 
@@ -452,7 +500,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
           <label className="text-xs text-muted-foreground mb-1 block">{t.transaction.wallet}</label>
           <button
             onClick={() => setShowWalletPicker(true)}
-            className="w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2"
+            className={`w-full bg-secondary text-foreground rounded-xl px-3 py-2.5 text-sm text-left outline-none hover:bg-secondary/80 transition-colors flex items-center gap-2 ${hasLc('wallet') ? LC_RING : ''}`}
           >
             {selectedWallet && (
               <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: selectedWallet.color }} />
@@ -480,7 +528,7 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
       {tab === 'expense' && (
         <div className="mb-4">
           <label className="text-xs text-muted-foreground mb-2 block">{t.transaction.category}</label>
-          <div className="grid grid-cols-5 gap-2">
+          <div className={`grid grid-cols-5 gap-2 rounded-xl ${hasLc('category') ? LC_RING : ''}`}>
             {sortedCategories.map(c => {
               const translatedName = tr.categories[c.id as keyof typeof tr.categories] || c.name;
               return (
@@ -531,8 +579,17 @@ export default function AddTransactionModal({ open, onClose, editTransaction }: 
           className="relative w-full sm:max-w-lg max-h-[90vh] overflow-auto glass-card rounded-t-3xl sm:rounded-3xl modal-content"
           onClick={e => e.stopPropagation()}
         >
+          {lowConfidence && activePrefill && (
+            <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+              <span>
+                {t.ai.lowConfidencePrefix.replace('{n}', String(Math.round(activePrefill.result.confidence * 100)))}
+              </span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-4 pt-2">
-            <div className="flex gap-2">
+            <div className={`flex gap-2 rounded-2xl ${hasLc('type') ? LC_RING : ''}`}>
               {(['expense', 'income', 'transfer'] as const).map(ty => {
                 const labels = {
                   expense: t.transaction.expense,

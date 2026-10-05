@@ -1,0 +1,170 @@
+%% ===== 类图：前端解析核心 + UI + 后端代理（关系已标注） =====
+classDiagram
+    direction LR
+
+    class AiParseResult {
+        +type: 'expense'|'income'|'transfer'
+        +amount: number
+        +currency: string
+        +category: string
+        +merchant?: string
+        +walletName?: string
+        +fromWalletName?: string
+        +toWalletName?: string
+        +datetime: string
+        +note: string
+        +confidence: number
+        +lowConfidenceFields?: string[]
+    }
+
+    class AiPrefill {
+        +result: AiParseResult
+        +rawInput: string
+        +channel: AiChannel
+    }
+
+    class AiConfig {
+        +provider: 'openai_compatible'|'ollama'
+        +baseUrl: string
+        +apiKey?: string
+        +model: string
+    }
+
+    class AiFeedback {
+        +input: string
+        +before: {category?,walletName?,type?}
+        +after: {category?,walletName?,type?}
+        +ts: number
+    }
+
+    class Transaction {
+        +id: string
+        +type: string
+        +amount: number
+        +currency: string
+        +walletId: string
+        +category: string
+        +datetime: string
+        +note: string
+        +source?: 'manual'|'ai'
+        +aiMeta?: {confidence,rawInput,corrected}
+    }
+
+    class AiParseLib {
+        <<module src/lib/aiParse.ts>>
+        +parseRelativeTime(text, now?) Date
+        +extractAmount(text) number
+        +ruleQuickParse(text, opts) RuleParseOutcome
+        +matchWalletByName(name, wallets) Wallet
+        +buildCloudPrompt(input, fbs, now) Prompt
+        +buildLitePrompt(input, fbs, now) string
+        +normalizeEndpoint(baseUrl) string
+        +callOpenAiCompatible(cfg, sys, usr, t) Promise~string~
+        +callOllama(cfg, prompt, ctx, t) Promise~string~
+        +extractJson(raw) T
+        +normalizeAiResult(parsed, fb) AiParseResult
+        +resolveChannel(config) AiChannel
+        +parseTransaction(text, opts) Promise~AiParseOutcome~
+    }
+
+    class AiConfigLib {
+        <<module src/lib/aiConfig.ts>>
+        +loadAiConfig(userId) AiConfig
+        +saveAiConfig(userId, cfg) void
+        +clearAiConfig(userId) void
+        +testConnection(cfg) Promise~TestResult~
+    }
+
+    class AiFeedbackLib {
+        <<module src/lib/aiFeedback.ts>>
+        +loadFeedbacks(userId) AiFeedback[]
+        +addFeedback(userId, fb) void
+        +bigramDice(a, b) number
+        +findRelevantFeedback(all, input, max) AiFeedback[]
+        +diffPrefill(prefill, submitted, wallets) AiFeedback
+    }
+
+    class PasteDetector {
+        <<module src/lib/pasteDetector.ts>>
+        +isBillPaste(text) boolean
+    }
+
+    class AiQuickInput {
+        <<component>>
+        -input: string
+        -parsing: boolean
+        -channelInfo: string
+        +parseAndRoute(text, opts, h) void
+        +onParsed(prefill)
+        +onManual()
+        +onRejected()
+    }
+
+    class Layout {
+        <<component>>
+        -aiInputOpen: boolean
+        -prefill: AiPrefill
+        -ignoredPastes: Set~string~
+        +handlePasteParse(text)
+    }
+
+    class AddTransactionModal {
+        <<component>>
+        +prefill?: AiPrefill
+        -aiConfidence: number
+        -lowFields: string[]
+        +handleSubmit()
+    }
+
+    class AiSettingsSection {
+        <<component>>
+        -draft: AiConfig
+        +handleTest()
+        +handleSave()
+    }
+
+    class usePasteListener {
+        <<hook>>
+        +usePasteListener(opts) void
+    }
+
+    class AiRoute {
+        <<backend routes/ai.js>>
+        +requireAuth(req,res,next)
+        +aiLimiter: RateLimit
+        -quotaMap: Map~string,number~
+        +POST /parse
+        +GET /quota
+    }
+
+    class JsonExtractJs {
+        <<backend lib/jsonExtract.js>>
+        +extractJson(raw) object
+    }
+
+    class AiPromptJs {
+        <<backend lib/aiPrompt.js>>
+        +buildCloudPrompt(input, now)
+        +normalizeAiResult(parsed, ccy)
+    }
+
+    %% ---- 关系 ----
+    AiParseLib ..> AiParseResult : 产出
+    AiParseLib ..> AiConfig : 读取
+    AiParseLib --> AiFeedbackLib : 调用 findRelevantFeedback
+    AiConfigLib ..> AiConfig : 存取
+    AiFeedbackLib ..> AiFeedback : CRUD
+    AiQuickInput --> AiParseLib : parseTransaction
+    AiQuickInput ..> AiPrefill : onParsed 载荷
+    Layout --> AiQuickInput : 挂载
+    Layout --> usePasteListener : 粘贴监听
+    usePasteListener --> PasteDetector : isBillPaste
+    Layout ..> AiPrefill : 传递 prefill
+    AddTransactionModal ..> AiPrefill : 消费 prefill
+    AddTransactionModal --> AiParseLib : matchWalletByName
+    AddTransactionModal --> AiFeedbackLib : diffPrefill→addFeedback
+    AddTransactionModal ..> Transaction : 入账(source=ai)
+    AiSettingsSection --> AiConfigLib : 读写配置/测试连接
+    AiRoute --> JsonExtractJs : 容错解析
+    AiRoute --> AiPromptJs : 云端档提示词+normalize
+    AiRoute ..> AiParseResult : 响应体 result

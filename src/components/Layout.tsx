@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { List, Wallet, CalendarDays, BarChart3, Settings, LogOut, Trash2, AlertTriangle, X, ChevronRight, Search, Check, Plus, Bell, Crown, Sparkles, PlusCircle } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
@@ -7,10 +7,15 @@ import { useSubscription } from '@/contexts/SubscriptionContext';
 import { SUPPORTED_CURRENCIES } from '@/lib/currencies';
 import SettingsModal from '@/components/SettingsModal';
 import AddTransactionModal from '@/components/AddTransactionModal';
+import AiQuickInput, { parseAndRoute, buildParseOptions } from '@/components/AiQuickInput';
+import AiBillImportModal from '@/components/AiBillImportModal';
+import ScreenshotModal from '@/components/ScreenshotModal';
+import { usePasteListener, hashText } from '@/hooks/usePasteListener';
 import ExchangeRateChart from '@/components/ExchangeRateChart';
 import NotificationCenter, { NotificationBadge, NotificationProvider, useNotificationManager } from '@/components/NotificationCenter';
 import UpgradeModal from '@/components/UpgradeModal';
 import { toast } from 'sonner';
+import type { AiPrefill } from '@/types';
 
 const NAV_ITEMS = [
   { path: '/transactions', label: 'transactions', icon: List },
@@ -34,9 +39,14 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { user, logout, bookName, currencies, primaryCurrency, addCurrency, removeCurrency, setPrimaryCurrency, refreshRates, t, language, setLanguage, avatar, setAvatar, clearTransactions } = useApp();
-  const { isPremium, showUpgradeModal } = useSubscription();
+  const { isPremium, showUpgradeModal, plan } = useSubscription();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [aiInputOpen, setAiInputOpen] = useState(false);
+  const [billImportOpen, setBillImportOpen] = useState(false);
+  const [screenshotOpen, setScreenshotOpen] = useState(false);
+  const [prefill, setPrefill] = useState<AiPrefill | null>(null);
+  const ignoredPastes = useRef<Set<string>>(new Set());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -68,6 +78,91 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     navigate('/login');
     toast.success(t.auth.logoutSuccess);
   };
+
+  // ---- AI 记账：四路径路由 handler（输入卡片与粘贴路径共用） ----
+
+  const handleRejected = () => {
+    toast(t.ai.rejectedToast); // 非交易语句仅 toast，不开 Modal
+  };
+
+  const handleParsed = (p: AiPrefill) => {
+    setPrefill(p);
+    setAiInputOpen(false);
+    setAddOpen(true);
+    if (p.result.confidence < 0.7) {
+      toast.warning(t.ai.lowConfidencePrefix.replace('{n}', String(Math.round(p.result.confidence * 100))));
+    } else {
+      toast.success(t.ai.parseSuccessToast);
+    }
+  };
+
+  const handleFailToEmpty = () => {
+    toast.error(t.ai.parseFailedToast);
+    setPrefill(null);
+    setAiInputOpen(false);
+    setAddOpen(true); // 空白传统 Modal
+  };
+
+  const handleManualFill = () => {
+    setPrefill(null);
+    setAiInputOpen(false);
+    setAddOpen(true);
+  };
+
+  const handleAddClose = () => {
+    setAddOpen(false);
+    setPrefill(null); // onClose 清空 prefill
+  };
+
+  const runAiParse = (text: string) => {
+    if (!user) return;
+    const opts = buildParseOptions({ userId: user.id, plan, wallets, primaryCurrency });
+    void parseAndRoute(text, opts, {
+      onRejected: handleRejected,
+      onParsed: handleParsed,
+      onFailToEmpty: handleFailToEmpty,
+      onQuotaExceeded: () => toast.warning(t.ai.quotaExceededToast),
+    });
+  };
+
+  // 智能粘贴：常驻 toast 10s，[AI 解析]/[忽略]
+  const handlePasteDetected = (text: string) => {
+    toast.custom(
+      tid => (
+        <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-3 shadow-lg">
+          <Sparkles className="w-4 h-4 text-primary flex-shrink-0" />
+          <span className="text-sm text-foreground flex-1">{t.ai.pasteDetected}</span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                toast.dismiss(tid);
+                runAiParse(text);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+            >
+              {t.ai.pasteParse}
+            </button>
+            <button
+              onClick={() => {
+                toast.dismiss(tid);
+                ignoredPastes.current.add(hashText(text)); // 忽略后同一次粘贴不再追问
+              }}
+              className="px-3 py-1.5 rounded-xl bg-secondary text-muted-foreground text-xs hover:text-foreground transition-colors"
+            >
+              {t.ai.pasteIgnore}
+            </button>
+          </div>
+        </div>
+      ),
+      { duration: 10000 }
+    );
+  };
+
+  usePasteListener({
+    enabled: !addOpen && !aiInputOpen, // Modal/AI 卡片打开时静默
+    suppressedRef: ignoredPastes,
+    onDetected: handlePasteDetected,
+  });
 
   const getCurrencyName = (code: string) => {
     const currency = SUPPORTED_CURRENCIES.find(c => c.code === code);
@@ -514,7 +609,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
             </div>
             
             <button
-              onClick={() => setAddOpen(true)}
+              onClick={() => setAiInputOpen(true)}
               className="nav-add-btn absolute left-1/2 -translate-x-1/2 -top-5 flex items-center justify-center w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg transition-transform active:scale-95"
             >
               <Plus className="w-7 h-7" />
@@ -541,7 +636,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
         </nav>
 
         <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-        <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
+        <AiQuickInput
+          open={aiInputOpen}
+          onClose={() => setAiInputOpen(false)}
+          onManual={handleManualFill}
+          onRejected={handleRejected}
+          onParsed={handleParsed}
+          onBatchImport={() => setBillImportOpen(true)}
+          onScreenshot={() => setScreenshotOpen(true)}
+        />
+        <AiBillImportModal open={billImportOpen} onClose={() => setBillImportOpen(false)} />
+        <ScreenshotModal open={screenshotOpen} onClose={() => setScreenshotOpen(false)} />
+        <AddTransactionModal open={addOpen} onClose={handleAddClose} prefill={prefill} />
         <NotificationCenter open={notificationOpen} onClose={() => setNotificationOpen(false)} />
         <UserMenuModal />
         <CurrencyPickerModal />
@@ -623,7 +729,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-auto p-6 relative">
         {children}
         <button
-          onClick={() => setAddOpen(true)}
+          onClick={() => setAiInputOpen(true)}
           className="nav-add-btn w-16 h-16 bottom-8 right-8 text-primary-foreground fixed z-40 flex items-center justify-center rounded-full bg-primary shadow-lg"
         >
           <span className="text-3xl font-light">+</span>
@@ -631,7 +737,18 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       </main>
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      <AddTransactionModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <AiQuickInput
+        open={aiInputOpen}
+        onClose={() => setAiInputOpen(false)}
+        onManual={handleManualFill}
+        onRejected={handleRejected}
+        onParsed={handleParsed}
+        onBatchImport={() => setBillImportOpen(true)}
+        onScreenshot={() => setScreenshotOpen(true)}
+      />
+      <AiBillImportModal open={billImportOpen} onClose={() => setBillImportOpen(false)} />
+      <ScreenshotModal open={screenshotOpen} onClose={() => setScreenshotOpen(false)} />
+      <AddTransactionModal open={addOpen} onClose={handleAddClose} prefill={prefill} />
       <NotificationCenter open={notificationOpen} onClose={() => setNotificationOpen(false)} />
       <UserMenuModal />
       <CurrencyPickerModal />

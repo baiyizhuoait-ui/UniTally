@@ -7,6 +7,7 @@ import { getHistoricalRate } from '@/lib/exchangeRates';
 import DatePicker from '@/components/DatePicker';
 import DayPicker from '@/components/DayPicker';
 import OptionPicker from '@/components/OptionPicker';
+import AiInsightCard from '@/components/AiInsightCard';
 import { SUBSCRIPTION_ICONS } from '@/lib/defaults';
 import type { Budget, Subscription } from '@/types';
 
@@ -360,6 +361,8 @@ export default function BudgetCenter() {
   return (
     <div className="max-w-3xl mx-auto">
       <h2 className="text-2xl font-bold text-foreground mb-5">{t.dashboard.title}</h2>
+
+      <AiInsightCard />
 
       {budgets.length > 0 && (
         <div className="space-y-4 mb-6">

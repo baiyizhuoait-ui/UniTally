@@ -6,6 +6,7 @@ import AddCategoryModal from './AddCategoryModal';
 import AddPlatformModal from './AddPlatformModal';
 import UpgradeModal from './UpgradeModal';
 import DataExportImport from './DataExportImport';
+import AiSettingsSection from './AiSettingsSection';
 import { translations } from '@/lib/i18n';
 
 interface Props {
@@ -13,7 +14,7 @@ interface Props {
   onClose: () => void;
 }
 
-type SettingsTab = 'appearance' | 'platforms' | 'categories' | 'data';
+type SettingsTab = 'appearance' | 'platforms' | 'categories' | 'ai' | 'data';
 
 export default function SettingsModal({ open, onClose }: Props) {
   const app = useApp();
@@ -30,6 +31,7 @@ export default function SettingsModal({ open, onClose }: Props) {
     { key: 'appearance', label: t.settings.appearance },
     { key: 'platforms', label: t.settings.platforms },
     { key: 'categories', label: t.settings.categories },
+    { key: 'ai', label: t.settings.aiTab },
     { key: 'data', label: language === 'zh' ? '数据导出' : 'Data Export' },
   ];
 
@@ -261,6 +263,10 @@ export default function SettingsModal({ open, onClose }: Props) {
                 <span className="text-sm">{language === 'zh' ? '恢复默认分类' : 'Reset to Default Categories'}</span>
               </button>
             </div>
+          )}
+
+          {tab === 'ai' && (
+            <AiSettingsSection />
           )}
 
           {tab === 'data' && (

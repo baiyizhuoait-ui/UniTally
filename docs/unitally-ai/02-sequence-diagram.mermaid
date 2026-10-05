@@ -1,0 +1,123 @@
+%% ===== 图 1：一句话记账全链路（输入→快判→LLM/规则→预填→确认→反馈落库） =====
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant FAB as Layout.tsx<br/>(FAB onClick)
+    participant AIC as AiQuickInput
+    participant AP as aiParse.ts<br/>parseTransaction
+    participant RQ as ruleQuickParse<br/>(快判)
+    participant FB as aiFeedback.ts<br/>findRelevantFeedback
+    participant EP as LLM 端点<br/>(BYOK / Ollama)
+    participant BE as backend/routes/ai.js<br/>POST /api/ai/parse
+    participant UP as 上游 LLM<br/>(OPENAI_BASE_URL)
+    participant ATM as AddTransactionModal<br/>(prefill)
+    participant AFC as aiFeedback.diffPrefill
+    participant LS as localStorage<br/>(mcb_userId_*)
+
+    U->>FAB: 点 +
+    FAB->>AIC: open AI 卡片
+    AIC->>AIC: 状态行 resolveChannel<br/>(规则模式/BYOK/代理剩余配额 GET /quota)
+    U->>AIC: 输入"昨天下午3点 瑞幸 29.9" 回车
+    AIC->>AP: parseTransaction(text, opts)
+
+    AP->>RQ: ruleQuickParse(text)
+    alt 无金额+否定词 / 短句无金额
+        RQ-->>AP: rejected=true
+        AP-->>AIC: outcome.rejected
+        AIC-->>U: toast"未识别到交易金额"（不开 Modal）
+    else 命中且无歧义（免 LLM）
+        RQ-->>AP: result(confidence 0.95)
+        AP-->>AIC: outcome{channel:'rule'}
+    else 未命中或歧义
+        RQ-->>AP: ambiguous / no-match
+        AP->>FB: findRelevantFeedback(all, text, 5 或 2)
+        FB-->>AP: few-shot 注入条目
+
+        alt 通道 = byok_cloud
+            AP->>EP: fetch normalizeEndpoint(baseUrl)+.../chat/completions<br/>完整档提示词, 20s
+        else 通道 = local_ollama
+            AP->>EP: POST /api/chat<br/>精简档, think:false, num_ctx, 60s
+        else 通道 = proxy
+            AP->>BE: fetch /api/ai/parse {text}<br/>Bearer JWT + x-user-plan
+            BE->>BE: requireAuth(jwt.verify) + 查配额 Map
+            BE->>UP: 完整档提示词, 20s
+            UP-->>BE: content
+            BE->>BE: extractJson + normalize(JS 版)
+            BE-->>AP: 200 { result, quota }
+        end
+
+        EP/BE-->>AP: 文本响应
+        AP->>AP: extractJson(容错)<br/>失败→重试一次(追加"只输出 JSON")
+        AP->>AP: normalizeAiResult(缺字段默认值, confidence 扣减)
+        alt LLM 两轮均失败
+            AP-->>AIC: outcome{degraded:true, 规则结果 或 error}
+        end
+    end
+
+    AIC-->>U: toast"已解析，请确认"
+    AIC->>FAB: onParsed(prefill)
+    FAB->>ATM: open + prefill
+    ATM->>ATM: matchWalletByName 映射钱包<br/>transfer 双匹配失败→降级单钱包
+    ATM->>ATM: confidence<0.7 → 黄条+可疑字段黄框
+
+    U->>ATM: 核对/修改字段, 点确认
+    ATM->>AFC: diffPrefill(prefill, 提交值)
+    alt 用户改过 分类/钱包/类型
+        AFC->>LS: addFeedback({input,before,after,ts})
+        ATM->>LS: addTransaction({..., source:'ai', aiMeta:{confidence,rawInput,corrected:true}})
+    else 未修改
+        ATM->>LS: addTransaction({..., source:'ai', aiMeta:{...,corrected:false}})
+    end
+    LS-->>U: 明细列表出现新交易
+    Note over AP,UP: 下次相似输入时, FB 检索 Dice≥0.5 命中<br/>→ few-shot 注入 → 二次解析跟随修正
+
+
+%% ===== 图 2：BYOK vs 服务端代理 通道判定与请求路径 =====
+sequenceDiagram
+    autonumber
+    actor U as 用户
+    participant ST as AiSettingsSection<br/>(设置页)
+    participant AC as aiConfig.ts
+    participant LS as localStorage<br/>mcb_userId_ai_config
+    participant AP as aiParse.ts<br/>resolveChannel
+    participant DS as DeepSeek 等云端<br/>/v1/chat/completions
+    participant OL as 本机 Ollama<br/>/api/chat
+    participant BE as /api/ai/parse<br/>(JWT+配额+IP限流)
+    participant UP as 平台上游<br/>(env OPENAI_*)
+
+    U->>ST: 配置 Provider
+    ST->>ST: [测试连接]<br/>云端: 1 次最小 chat / 本地: GET /api/tags
+    ST->>AC: saveAiConfig(cfg)
+    AC->>LS: 写 mcb_userId_ai_config<br/>(Key 只存浏览器)
+
+    Note over AP: 每次解析前: resolveChannel(config)
+    alt provider=ollama 或 baseUrl 含 localhost/127.0.0.1
+        AP-->>AP: channel = local_ollama
+        U->>AP: 解析请求
+        AP->>OL: POST /api/chat<br/>精简档(~300tok) think:false options.num_ctx<br/>超时 60s
+        OL-->>AP: message.content
+        Note over AP,BE: 不经代理 / 不占配额 / 反馈注入本地 2 条
+    else provider=openai_compatible 且 apiKey 非空
+        AP-->>AP: channel = byok_cloud
+        U->>AP: 解析请求
+        AP->>DS: POST normalizeEndpoint(baseUrl)<br/>完整档(~900tok) + 反馈 5 条<br/>超时 20s
+        DS-->>AP: choices[0].message.content
+        Note over AP,BE: 不经代理 / 不占配额 / 文本不出本机(隐私)
+    else 无配置或 Key 为空
+        AP-->>AP: channel = proxy
+        U->>AP: 解析请求
+        AP->>BE: POST {text} Bearer JWT x-user-plan
+        BE->>BE: requireAuth → 配额检查(内存Map)<br/>IP rate limit 30/min
+        alt 配额不足
+            BE-->>U: 429 {error, quota} → toast 引导配置 Key
+        else 服务端未配 OPENAI_API_KEY
+            BE-->>AP: 503 → AP 降级规则结果
+        else 正常
+            BE->>UP: 完整档, 20s (重试1次)
+            UP-->>BE: content → extractJson+normalize
+            BE-->>AP: 200 { result, quota{used,limit} }
+            AP->>U: onQuota 回写卡片"今日剩余 N 次"
+        end
+    end
+
+    Note over AP: 任何 LLM 路径失败 → 降级规则结果(degraded)<br/>规则也无 → 空 Modal 手动填, 永不白屏

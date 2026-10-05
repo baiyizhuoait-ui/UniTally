@@ -6,6 +6,7 @@ export interface PlanFeatures {
   exportEnabled: boolean;
   budgetLimit: number;
   subscriptionTrackingLimit: number;
+  aiParseDailyQuota: number;
 }
 
 export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
@@ -15,6 +16,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
     exportEnabled: false,
     budgetLimit: 3,
     subscriptionTrackingLimit: 3,
+    aiParseDailyQuota: 5,
   },
   premium: {
     maxWallets: Infinity,
@@ -22,6 +24,7 @@ export const PLAN_FEATURES: Record<PlanType, PlanFeatures> = {
     exportEnabled: true,
     budgetLimit: Infinity,
     subscriptionTrackingLimit: Infinity,
+    aiParseDailyQuota: 30,
   },
 };
 
@@ -69,5 +72,9 @@ export const FEATURE_DESCRIPTIONS = {
   subscriptionTrackingLimit: {
     zh: '订阅追踪上限',
     en: 'Subscription Tracking',
+  },
+  aiParseDailyQuota: {
+    zh: 'AI 解析每日次数（平台代理）',
+    en: 'Daily AI Parses (Platform Proxy)',
   },
 };

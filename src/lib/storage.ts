@@ -18,6 +18,13 @@ const USER_DATA_KEYS = {
   AVATAR: 'avatar',
   SETUP_COMPLETED: 'setup_completed',
   BOOK_NAME: 'book_name',
+  AI_CONFIG: 'ai_config',
+  AI_CONFIG_BY_PROVIDER: 'ai_config_by_provider',
+  AI_PARSE_MODE: 'ai_parse_mode',
+  AI_FEEDBACK: 'ai_feedback',
+  AI_CAT_CACHE: 'ai_cat_cache',
+  AI_INSIGHT_CACHE: 'ai_insight_cache',
+  AI_SHOT_CONFIG: 'ai_shot_config',
 } as const;
 
 function getUserDataKey(userId: string, key: string): string {

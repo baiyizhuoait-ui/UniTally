@@ -8,6 +8,17 @@ import { translations, type Language } from '@/lib/i18n';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { PLAN_FEATURES } from '@/lib/plans';
 
+// ===== TODO(TEMP): 临时免登录直入（体验 AI 功能用）。恢复登录时把 DEV_BYPASS_AUTH 改回 false 即可 =====
+const DEV_BYPASS_AUTH = true;
+const DEV_DEMO_USER: User = {
+  id: 'demo',
+  email: 'demo@local.dev',
+  name: 'Demo',
+  provider: 'email',
+  createdAt: 0,
+};
+// ===== END TODO(TEMP) =====
+
 interface AppContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -98,10 +109,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const isPremium = subscription.isPremium;
   
   const [user, setUser] = useState<User | null>(() =>
-    loadFromStorage(STORAGE_KEYS.USER, null)
+    DEV_BYPASS_AUTH ? DEV_DEMO_USER : loadFromStorage(STORAGE_KEYS.USER, null)
   );
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() =>
-    authService.isAuthenticated()
+    DEV_BYPASS_AUTH ? true : authService.isAuthenticated()
   );
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   
@@ -233,6 +244,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
+      if (DEV_BYPASS_AUTH) {
+        // TODO(TEMP): 免登录直入时跳过 Firebase/后端鉴权初始化
+        setAuthLoading(false);
+        return;
+      }
       setAuthLoading(true);
       try {
         const currentUser = authService.getCurrentUser();

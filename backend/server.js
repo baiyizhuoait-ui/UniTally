@@ -39,6 +39,9 @@ app.use('/api/auth', (req, res, next) => {
   next();
 }, require('./routes/auth'));
 
+// AI parse proxy (Bearer JWT + IP rate limit + daily quota kept in-memory inside the router)
+app.use('/api/ai', require('./routes/ai'));
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

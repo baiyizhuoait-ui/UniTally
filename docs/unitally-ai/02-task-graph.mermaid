@@ -1,0 +1,17 @@
+%% ===== 任务依赖图（T01→T02/T03 并行→T04→T05） =====
+graph TD
+    T01["T01 基础设施与类型<br/>types/index.ts · i18n.ts ai段 · plans.ts<br/>storage.ts · vitest.config.ts"]
+    T02["T02 解析核心库 + 单测<br/>aiParse.ts · aiConfig.ts · aiFeedback.ts<br/>pasteDetector.ts · ai_parse_unit.test.ts"]
+    T03["T03 后端代理路由<br/>routes/ai.js · lib/jsonExtract.js<br/>lib/aiPrompt.js · server.js 挂载"]
+    T04["T04 UI 集成<br/>AiQuickInput · usePasteListener<br/>AiSettingsSection · Layout · AddTransactionModal<br/>SettingsModal"]
+    T05["T05 评测集 + 真调用基线<br/>ai_parse_eval.test.ts<br/>RUN_AI_EVAL=1 双基线报告"]
+
+    T01 --> T02
+    T01 --> T03
+    T02 --> T04
+    T03 --> T04
+    T02 --> T05
+
+    style T01 fill:#e0e7ff,stroke:#4f46e5
+    style T04 fill:#fef3c7,stroke:#d97706
+    style T05 fill:#dcfce7,stroke:#16a34a
