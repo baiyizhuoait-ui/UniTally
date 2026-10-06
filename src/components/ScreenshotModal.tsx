@@ -9,6 +9,7 @@ import { ruleCategorizeBill, loadCatCache, findCachedCategory, buildFingerprintS
 import { testConnection } from '@/lib/aiConfig';
 import { toast } from 'sonner';
 import {
+  DEFAULT_SCREENSHOT_CONFIG,
   loadScreenshotConfig,
   saveScreenshotConfig,
   compressImage,
@@ -38,14 +39,11 @@ export default function ScreenshotModal({ open, onClose }: Props): JSX.Element |
   const [parsing, setParsing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [rows, setRows] = useState<Row[]>([]);
-  const [cfg, setCfg] = useState<ScreenshotConfig>(() => (user ? loadScreenshotConfig(user.id) : {
-    provider: 'vl_openai',
-    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    apiKey: '',
-    model: 'glm-4v-flash',
-  }));
-  // 未配置 Key 时配置面板默认展开——用户不用找"去哪调配视觉模型"
-  const [showCfg, setShowCfg] = useState(() => !cfg.apiKey);
+  const [cfg, setCfg] = useState<ScreenshotConfig>(() =>
+    user ? loadScreenshotConfig(user.id) : { ...DEFAULT_SCREENSHOT_CONFIG }
+  );
+  // 未配置完整（Key / Base URL / 模型任一缺失）时配置面板默认展开——用户不用找"去哪调配视觉模型"
+  const [showCfg, setShowCfg] = useState(() => !cfg.apiKey || !cfg.baseUrl || !cfg.model);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // 弹窗打开期间支持 Ctrl+V 直接粘贴截图
@@ -89,6 +87,12 @@ export default function ScreenshotModal({ open, onClose }: Props): JSX.Element |
 
   const handleParse = async () => {
     if (!previewUrl || parsing) return;
+    // 必填守卫：默认不再预填供应商/模型，缺配置时展开面板并提示
+    if (cfg.provider === 'vl_openai' && (!cfg.baseUrl.trim() || !cfg.model.trim())) {
+      setShowCfg(true);
+      toast.error(tr.missingFields);
+      return;
+    }
     setParsing(true);
     try {
       saveScreenshotConfig(user.id, cfg);
@@ -123,6 +127,11 @@ export default function ScreenshotModal({ open, onClose }: Props): JSX.Element |
   };
 
   const handleTestConn = async () => {
+    // 必填守卫（custom_local 只需要 baseUrl）
+    if (!cfg.baseUrl.trim() || (cfg.provider === 'vl_openai' && !cfg.model.trim())) {
+      toast.error(tr.missingFields);
+      return;
+    }
     const result = await testConnection({
       provider: 'openai_compatible',
       baseUrl: cfg.baseUrl,

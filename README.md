@@ -15,13 +15,13 @@ UniTally helps you track income and expenses across different currencies with re
 - **One-line entry** — type "昨天在泰国花了500株" and get a structured transaction (date, amount, THB, category) prefilled for confirmation
 - **Two-stage parsing** — deterministic rule fast-path (regex + keyword categorization) handles the obvious cases with zero API cost; the LLM only sees ambiguous input
 - **Smart paste detection** — copy a bill from WeChat/Alipay anywhere and the app asks if you want to import it; silent while you're pasting into a form
-- **Bill screenshot recognition** — paste or upload a payment screenshot, a vision model (default: free GLM-4V-Flash) extracts every transaction; review with **inline editing** of type, merchant, datetime, amount, and category before importing
+- **Bill screenshot recognition** — paste or upload a payment screenshot, a vision model (one-tap fill for free GLM-4V-Flash, or any OpenAI-compatible vision endpoint) extracts every transaction; review with **inline editing** of type, merchant, datetime, amount, and category before importing
 - **Batch file import** — upload WeChat/Alipay CSV bills, auto-categorized with duplicate fingerprints (same day + amount + type)
 - **AI insights** — spending statistics and summaries with a rule-based fallback when no model is configured
 - **Feedback loop** — your corrections are remembered and injected as few-shot examples, so parsing adapts to your habits
-- **Three modes, honest status line** — Rule mode (no AI) / Cloud (BYOK) / Local (Ollama); the status badge reflects *verified* connectivity (local Ollama is health-checked, offline models never show a fake "connected" state)
+- **Three modes, honest status line** — Rule mode (no AI) / Cloud (BYOK) / Local (Ollama, LM Studio, llama.cpp, vLLM — any OpenAI-compatible server); the status badge reflects *verified* connectivity (local servers are health-checked, offline models never show a fake "connected" state)
 - **27-currency awareness** — amount expressions in Chinese and English (¥ $ € £ ฿ ₩ 美元 ringgit baht rupiah…) map to correct ISO codes; unrecognized currencies fall back to your base currency instead of polluting records
-- **Privacy by design** — BYOK direct connection (your key, your quota, stored only in localStorage) or a local Ollama model; a platform proxy with daily quota is available for quick starts
+- **Privacy by design** — BYOK direct connection (your key, your quota, stored only in localStorage) or a local model (Ollama / LM Studio / llama.cpp / vLLM); a platform proxy with daily quota is available for quick starts
 
 ### Multi-Currency Accounting
 - Track income and expenses in **27 supported currencies**
@@ -66,11 +66,13 @@ UniTally helps you track income and expenses across different currencies with re
 
 ## AI Configuration
 
+Nothing is pre-filled: Base URL and model fields start empty (examples appear as placeholders) so the UI never fakes a configured provider. Fill them in or use the quick-fill buttons.
+
 | Mode | Requirement | Notes |
 |---|---|---|
 | Rule mode | None | Regex + keyword parsing, always available, zero cost |
-| Cloud (BYOK) | An OpenAI-compatible API key (default: [Zhipu GLM-4V-Flash](https://open.bigmodel.cn/), free) | Key stored in localStorage only; requests go directly to the provider |
-| Local | [Ollama](https://ollama.com/) with any chat model | 100% offline; connectivity and installed models are health-checked |
+| Cloud (BYOK) | An OpenAI-compatible API key (e.g. [Zhipu GLM-4V-Flash](https://open.bigmodel.cn/), free) | Key stored in localStorage only; requests go directly to the provider |
+| Local | [Ollama](https://ollama.com/), LM Studio, llama.cpp server, vLLM — any OpenAI-compatible local server | 100% offline; dual-protocol probing (`/v1/models` first, `/api/tags` fallback) verifies connectivity and installed models |
 | Platform proxy | Sign in | Free daily quota, no key management |
 
 Screenshot recognition requires a **vision** model (text-only models like DeepSeek cannot read images).
@@ -134,7 +136,7 @@ cd .. && npm run dev
 1. Copy `backend/.env.example` to `backend/.env` and fill in your credentials
 2. Configure Firebase credentials for authentication
 3. Set up Brevo SMTP for email verification
-4. (Optional) Configure AI in **Settings → AI** — bring your own key or point to a local Ollama instance
+4. (Optional) Configure AI in **Settings → AI** — bring your own key or point to a local model server (Ollama, LM Studio, llama.cpp, vLLM)
 
 ### Testing
 
@@ -165,7 +167,7 @@ npx tsc --noEmit  # typecheck
 - **Backend**: Node.js + Express
 - **Auth**: Firebase Authentication + email verification
 - **Email**: Brevo SMTP
-- **AI**: OpenAI-compatible BYOK / Ollama / platform proxy, with a deterministic rule engine fallback
+- **AI**: OpenAI-compatible BYOK / local models (Ollama, LM Studio, llama.cpp, vLLM) / platform proxy, with a deterministic rule engine fallback
 
 ## License
 

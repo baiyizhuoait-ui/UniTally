@@ -595,7 +595,7 @@ function withTimeout(timeoutMs: number, external?: AbortSignal): { signal: Abort
   };
 }
 
-/** OpenAI 兼容云端调用（POST {normalized}/chat/completions） */
+/** OpenAI 兼容云端调用（POST {normalized}/chat/completions）；system 为空时省略 system 消息 */
 export async function callOpenAiCompatible(
   cfg: AiConfig,
   system: string,
@@ -605,6 +605,9 @@ export async function callOpenAiCompatible(
 ): Promise<string> {
   const { signal: merged, dispose } = withTimeout(timeoutMs, signal);
   try {
+    const messages: { role: string; content: string }[] = [];
+    if (system) messages.push({ role: 'system', content: system });
+    messages.push({ role: 'user', content: user });
     const res = await fetch(normalizeEndpoint(cfg.baseUrl), {
       method: 'POST',
       headers: {
@@ -613,10 +616,7 @@ export async function callOpenAiCompatible(
       },
       body: JSON.stringify({
         model: cfg.model,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: user },
-        ],
+        messages,
         stream: false,
         temperature: 0.1,
       }),
@@ -942,7 +942,16 @@ export async function parseTransaction(text: string, opts: ParseOptions): Promis
       if (channel === 'local_ollama') {
         const suffix = retry ? '\n（只输出 JSON，不要任何其他文字）' : '';
         const prompt = buildLitePrompt(text, fewShots, now, opts.primaryCurrency) + suffix;
-        const raw = await callOllama(config, prompt, numCtx, TIMEOUT_LOCAL_MS, opts.signal);
+        let raw: string;
+        try {
+          raw = await callOllama(config, prompt, numCtx, TIMEOUT_LOCAL_MS, opts.signal);
+        } catch (err) {
+          // 双协议兼容：LM Studio / llama.cpp / vLLM 等无 /api/chat 原生端点的本地服务，
+          // 在 400/404/405/422 时改走 OpenAI 兼容 /v1/chat/completions（Ollama 本身也支持）
+          const msg = err instanceof Error ? err.message : String(err);
+          if (!/^Ollama HTTP (400|404|405|422)\b/.test(msg)) throw err;
+          raw = await callOpenAiCompatible(config, '', prompt, TIMEOUT_LOCAL_MS, opts.signal);
+        }
         const parsed = extractJson<Record<string, unknown>>(raw);
         if (!parsed || typeof parsed !== 'object') return null;
         const normalized = normalizeAiResult(parsed, { primaryCurrency: opts.primaryCurrency, now });

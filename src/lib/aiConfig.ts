@@ -5,7 +5,14 @@ import type { AiConfig, AiProviderType } from '@/types';
 import { USER_DATA_KEYS, loadUserData, saveUserData } from '@/lib/storage';
 import { normalizeEndpoint } from '@/lib/aiParse';
 
+// 默认值不预填任何供应商/模型（用户明确要求）：表单留空 + placeholder 给示例，避免误导"已配置"
 export const DEFAULT_AI_CONFIG: Record<AiProviderType, Pick<AiConfig, 'baseUrl' | 'model'>> = {
+  openai_compatible: { baseUrl: '', model: '' },
+  ollama: { baseUrl: '', model: '' },
+};
+
+/** 输入框 placeholder 示例（仅提示格式，不作为值预填） */
+export const PLACEHOLDER_AI_CONFIG: Record<AiProviderType, Pick<AiConfig, 'baseUrl' | 'model'>> = {
   openai_compatible: { baseUrl: 'https://api.deepseek.com', model: 'deepseek-chat' },
   ollama: { baseUrl: 'http://localhost:11434', model: 'qwen3.5:9b' },
 };
@@ -72,25 +79,49 @@ function timeoutSignal(ms: number): { signal: AbortSignal; dispose: () => void }
 /**
  * 测试连接：
  * - 云端：发 1 次 messages=[{role:'user',content:'ping'}] max_tokens:1 的最小 chat 请求
- * - 本地：GET {base}/api/tags 探活（更快且不受模型加载影响）；
- *   失败时 error 由调用方（AiSettingsSection）映射为 OLLAMA_ORIGINS 提示文案
+ * - 本地：双协议探测——先 OpenAI 兼容 GET {base}/v1/models（LM Studio / llama.cpp / vLLM
+ *   等均支持），失败再退 Ollama 原生 GET {base}/api/tags；两种应答格式都能拿到模型列表
+ *   做校验。失败时 error 由调用方（AiSettingsSection）映射为启动/CORS 提示文案
  */
 export async function testConnection(cfg: AiConfig): Promise<TestConnectionResult> {
   const start = Date.now();
   const { signal, dispose } = timeoutSignal(15000);
+  // 必填守卫：默认配置不再预填，空 baseUrl/model 直接给出可行动的提示
+  if (!cfg.baseUrl.trim() || !cfg.model.trim()) {
+    return { ok: false, error: 'missing-field' };
+  }
   try {
     if (cfg.provider === 'ollama') {
       const base = cfg.baseUrl.replace(/\/+$/, '');
-      const res = await fetch(`${base}/api/tags`, { signal });
-      if (!res.ok) {
-        return { ok: false, error: `HTTP ${res.status}` };
+      // 探测一个端点并解析模型列表（OpenAI 格式 data[].id / Ollama 格式 models[].name）
+      const probe = async (url: string): Promise<{ ok: boolean; status?: number; models: string[] }> => {
+        try {
+          const res = await fetch(url, { signal });
+          if (!res.ok) return { ok: false, status: res.status, models: [] };
+          const body = await res.json().catch(() => null) as {
+            data?: { id?: string }[];
+            models?: { name?: string; model?: string }[];
+          } | null;
+          const models = Array.isArray(body?.data)
+            ? body.data.map(m => String(m.id ?? '')).filter(Boolean)
+            : Array.isArray(body?.models)
+              ? body.models.map(m => String(m.name ?? m.model ?? '')).filter(Boolean)
+              : [];
+          return { ok: true, models };
+        } catch {
+          return { ok: false, models: [] };
+        }
+      };
+      let result = await probe(`${base}/v1/models`);
+      if (!result.ok) {
+        result = await probe(`${base}/api/tags`);
       }
-      const body = await res.json().catch(() => null) as { models?: { name?: string; model?: string }[] } | null;
-      // 探活通过 ≠ 模型可用：必须校验配置的模型已安装，否则出现"7ms 假成功"但真实解析 model not found
-      const names: string[] = Array.isArray(body?.models)
-        ? body.models.map(m => String(m.name ?? m.model ?? '')).filter(Boolean)
-        : [];
+      if (!result.ok) {
+        return { ok: false, error: result.status ? `HTTP ${result.status}` : 'unreachable' };
+      }
+      // 探活通过 ≠ 模型可用：必须校验配置的模型已存在，否则出现"7ms 假成功"但真实解析 model not found
       const want = cfg.model.trim();
+      const names = result.models;
       if (names.length > 0 && want) {
         const stripTag = (s: string) => s.replace(/:.*$/, '');
         const installed = names.some(n => n === want || stripTag(n) === stripTag(want));

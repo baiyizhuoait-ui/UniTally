@@ -20,11 +20,13 @@ export interface ScreenshotConfig {
   model: string;     // vl_openai 默认 glm-4v-flash；custom_local 由服务端决定
 }
 
+// 默认值不预填任何供应商/模型（用户明确要求）；首次使用由配置面板的
+// "智谱 glm-4v-flash（免费）" 快捷按钮显式填入，或用户手动填写
 export const DEFAULT_SCREENSHOT_CONFIG: ScreenshotConfig = {
   provider: 'vl_openai',
-  baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
+  baseUrl: '',
   apiKey: '',
-  model: 'glm-4v-flash',
+  model: '',
 };
 
 export function loadScreenshotConfig(userId: string): ScreenshotConfig {

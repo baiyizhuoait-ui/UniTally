@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/contexts/AppContext';
 import {
   DEFAULT_AI_CONFIG,
+  PLACEHOLDER_AI_CONFIG,
   loadAiConfig,
   loadAiConfigByProvider,
   loadAiParseMode,
@@ -34,12 +35,12 @@ export default function AiSettingsSection(): JSX.Element {
   const isRule = uiMode === 'rule';
   const provider: AiProviderType = uiMode === 'rule' ? 'openai_compatible' : uiMode;
 
-  // 当前表单值 → cfg（表单维度，供测试/保存复用）
+  // 当前表单值 → cfg（表单维度，供测试/保存复用）；不再回退到预填默认值，空就存空
   const formConfig = (): AiConfig => ({
     provider,
-    baseUrl: baseUrl.trim() || DEFAULT_AI_CONFIG[provider].baseUrl,
+    baseUrl: baseUrl.trim(),
     apiKey: provider === 'openai_compatible' ? apiKey.trim() : undefined,
-    model: model.trim() || DEFAULT_AI_CONFIG[provider].model,
+    model: model.trim(),
   });
 
   // 按 provider 回填表单（优先该 provider 上次保存的配置，否则默认值）
@@ -97,6 +98,13 @@ export default function AiSettingsSection(): JSX.Element {
     setTesting(true);
     setTestState(null);
     setTestMessage('');
+    // 必填守卫：默认不再预填供应商/模型，空字段直接提示而不是发起无意义请求
+    if (!baseUrl.trim() || !model.trim()) {
+      setTesting(false);
+      setTestState('fail');
+      setTestMessage(t.ai.missingFields);
+      return;
+    }
     try {
       const result = await testConnection(formConfig());
       if (result.ok) {
@@ -187,7 +195,7 @@ export default function AiSettingsSection(): JSX.Element {
               type="text"
               value={baseUrl}
               onChange={e => setBaseUrl(e.target.value)}
-              placeholder={DEFAULT_AI_CONFIG[provider].baseUrl}
+              placeholder={PLACEHOLDER_AI_CONFIG[provider].baseUrl}
               className={inputClass}
             />
           </div>
@@ -214,7 +222,7 @@ export default function AiSettingsSection(): JSX.Element {
               type="text"
               value={model}
               onChange={e => setModel(e.target.value)}
-              placeholder={DEFAULT_AI_CONFIG[provider].model}
+              placeholder={PLACEHOLDER_AI_CONFIG[provider].model}
               className={inputClass}
             />
           </div>
