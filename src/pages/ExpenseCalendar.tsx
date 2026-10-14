@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
 import { getHistoricalRate } from '@/lib/exchangeRates';
@@ -533,8 +534,8 @@ export default function ExpenseCalendar() {
                     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
                     const startOfYear = new Date(today.getFullYear(), 0, 1);
                     
-                    setTempStartDate(startOfMonth.toISOString().split('T')[0]);
-                    setTempEndDate(today.toISOString().split('T')[0]);
+                    setTempStartDate(toLocalDateStr(startOfMonth));
+                    setTempEndDate(toLocalDateStr(today));
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
                 >
@@ -546,8 +547,8 @@ export default function ExpenseCalendar() {
                     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
                     
-                    setTempStartDate(startOfLastMonth.toISOString().split('T')[0]);
-                    setTempEndDate(endOfLastMonth.toISOString().split('T')[0]);
+                    setTempStartDate(toLocalDateStr(startOfLastMonth));
+                    setTempEndDate(toLocalDateStr(endOfLastMonth));
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
                 >

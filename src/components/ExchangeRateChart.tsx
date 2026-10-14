@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { getHistoricalRateForChart, getCachedHistoricalDates, fetchHistoricalRates, getLatestCachedRate } from '@/lib/exchangeRates';
 import { ArrowRightLeft, ChevronDown } from 'lucide-react';
@@ -96,7 +97,7 @@ export default function ExchangeRateChart({
     else if (period === '3y') cutoff.setFullYear(now.getFullYear() - 3);
     else if (period === '10y') cutoff.setFullYear(now.getFullYear() - 10);
 
-    const cutoffStr = cutoff.toISOString().split('T')[0];
+    const cutoffStr = toLocalDateStr(cutoff);
     return dates
       .filter(d => d >= cutoffStr)
       .map(d => {

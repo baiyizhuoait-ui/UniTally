@@ -5,9 +5,10 @@
  */
 
 /**
- * 从 LLM 原始输出中提取 JSON 对象：
+ * 从 LLM 原始输出中提取 JSON（对象或数组）：
  * 1. 剥 ```json 代码围栏
- * 2. 截取首个 { 到字符串感知（引号转义感知）配平的 }
+ * 2. 首个 { 或 [（谁先出现用哪对）到字符串感知（引号转义感知）配平的闭符
+ *    ——数组支持：批量输出（如 [{"i":1,"c":"food"},…]）此前会被 indexOf('{') 截断成首对象
  * 3. JSON.parse；失败 → 修复尾逗号重试；仍失败 → null
  */
 exports.extractJson = function extractJson(raw) {
@@ -16,10 +17,16 @@ exports.extractJson = function extractJson(raw) {
   // 剥代码围栏
   s = s.replace(/```(?:json)?/gi, '').trim();
 
-  const start = s.indexOf('{');
-  if (start === -1) {
+  const firstBrace = s.indexOf('{');
+  const firstBracket = s.indexOf('[');
+  if (firstBrace === -1 && firstBracket === -1) {
     try { return JSON.parse(s); } catch (e) { return null; }
   }
+  const start = firstBracket !== -1 && (firstBrace === -1 || firstBracket < firstBrace)
+    ? firstBracket
+    : firstBrace;
+  const openCh = s[start];
+  const closeCh = openCh === '{' ? '}' : ']';
 
   // 字符串内引号转义感知配平
   let depth = 0;
@@ -32,8 +39,8 @@ exports.extractJson = function extractJson(raw) {
     if (ch === '\\') { escaped = true; continue; }
     if (ch === '"') { inString = !inString; continue; }
     if (inString) continue;
-    if (ch === '{') depth++;
-    else if (ch === '}') {
+    if (ch === openCh) depth++;
+    else if (ch === closeCh) {
       depth--;
       if (depth === 0) { end = i; break; }
     }

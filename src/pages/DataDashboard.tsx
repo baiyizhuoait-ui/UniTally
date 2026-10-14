@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol, SUPPORTED_CURRENCIES } from '@/lib/currencies';
 import { Plus, Trash2, Calendar, Tag, DollarSign, FileText, Building2, Bell, ChevronDown, Check } from 'lucide-react';
@@ -28,7 +29,7 @@ export default function BudgetCenter() {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(toLocalDateStr(new Date()));
   const [endDate, setEndDate] = useState('');
   const [note, setNote] = useState('');
   const [budgetCurrency, setBudgetCurrency] = useState(primaryCurrency);
@@ -40,7 +41,7 @@ export default function BudgetCenter() {
   const [subName, setSubName] = useState('');
   const [subAmount, setSubAmount] = useState('');
   const [subCurrency, setSubCurrency] = useState(primaryCurrency);
-  const [subStartDate, setSubStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [subStartDate, setSubStartDate] = useState(toLocalDateStr(new Date()));
   const [subEndDate, setSubEndDate] = useState('');
   const [subNote, setSubNote] = useState('');
   const [subPeriod, setSubPeriod] = useState<Period>('1m');
@@ -59,7 +60,7 @@ export default function BudgetCenter() {
     setName('');
     setAmount('');
     setCategory('');
-    setStartDate(new Date().toISOString().split('T')[0]);
+    setStartDate(toLocalDateStr(new Date()));
     setEndDate('');
     setNote('');
     setBudgetCurrency(primaryCurrency);
@@ -75,7 +76,7 @@ export default function BudgetCenter() {
     setSubName('');
     setSubAmount('');
     setSubCurrency(primaryCurrency);
-    setSubStartDate(new Date().toISOString().split('T')[0]);
+    setSubStartDate(toLocalDateStr(new Date()));
     setSubEndDate('');
     setSubNote('');
     setSubPeriod('1m');
@@ -218,7 +219,7 @@ export default function BudgetCenter() {
         break;
     }
     
-    return endDate.toISOString().split('T')[0];
+    return toLocalDateStr(endDate);
   };
 
   const getPeriodDays = (period: Period): number => {
@@ -265,7 +266,7 @@ export default function BudgetCenter() {
   };
 
   const getSubscriptionStatus = (subscription: typeof subscriptions[0]) => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
     const isExpired = today > subscription.endDate;
     const daysRemaining = Math.ceil((new Date(subscription.endDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24));
     
@@ -892,7 +893,7 @@ export default function BudgetCenter() {
 
       <DatePicker
         open={showEndDatePicker}
-        value={endDate || new Date().toISOString().split('T')[0]}
+        value={endDate || toLocalDateStr(new Date())}
         onChange={setEndDate}
         onClose={() => setShowEndDatePicker(false)}
       />
@@ -909,7 +910,7 @@ export default function BudgetCenter() {
 
       <DatePicker
         open={showSubEndDatePicker}
-        value={subEndDate || new Date().toISOString().split('T')[0]}
+        value={subEndDate || toLocalDateStr(new Date())}
         onChange={setSubEndDate}
         onClose={() => setShowSubEndDatePicker(false)}
       />

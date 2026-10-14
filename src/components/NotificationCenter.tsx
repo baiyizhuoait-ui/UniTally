@@ -1,4 +1,5 @@
 import { useState, useMemo, createContext, useContext, useCallback } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { Bell, X, AlertTriangle, Calendar, CreditCard, Trash2 } from 'lucide-react';
 import type { Notification } from '@/types';
@@ -28,7 +29,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const generatedNotifications = useMemo(() => {
     const notifications: Notification[] = [];
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
     const currentDay = new Date().getDate();
 
     budgets.forEach(budget => {

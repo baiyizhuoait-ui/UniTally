@@ -67,17 +67,33 @@ export default function MyAssets() {
   const [editingWallet, setEditingWallet] = useState<WalletType | null>(null);
   const [statsWallet, setStatsWallet] = useState<WalletType | null>(null);
 
+  // 交易金额按钱包币种折算（复用页面级 latestRate 汇率）
+  const convertTxAmount = (amount: number, txCurrency: string, walletCurrency: string) => {
+    if (txCurrency === walletCurrency) return amount;
+    const rate = txCurrency === primaryCurrency
+      ? (walletCurrency === secondaryCurrency ? latestRate : 1 / latestRate)
+      : (walletCurrency === primaryCurrency ? 1 / latestRate : latestRate);
+    return amount * rate;
+  };
+
   const getWalletBalance = (walletId: string, walletCurrency: string, initialBalance: number) => {
-    const walletTxs = transactions.filter(t => t.walletId === walletId);
+    // 转账两端都要参与余额：转出端（t.walletId 恒等于 fromWalletId）与转入端
+    // （旧版只匹配 t.walletId，转入账户永远匹配不上 → 净资产算错）
+    const walletTxs = transactions.filter(t =>
+      t.walletId === walletId ||
+      (t.type === 'transfer' && (t.fromWalletId === walletId || t.toWalletId === walletId))
+    );
     let balance = initialBalance;
     for (const t of walletTxs) {
-      let amount = t.amount;
-      if (t.currency !== walletCurrency) {
-        const rate = t.currency === primaryCurrency
-          ? (walletCurrency === secondaryCurrency ? latestRate : 1 / latestRate)
-          : (walletCurrency === primaryCurrency ? 1 / latestRate : latestRate);
-        amount *= rate;
+      if (t.type === 'transfer') {
+        if (t.fromWalletId === walletId) {
+          balance -= convertTxAmount(t.fromAmount ?? t.amount, t.fromCurrency ?? t.currency, walletCurrency);
+        } else if (t.toWalletId === walletId) {
+          balance += convertTxAmount(t.toAmount ?? t.amount, t.toCurrency ?? t.currency, walletCurrency);
+        }
+        continue;
       }
+      const amount = convertTxAmount(t.amount, t.currency, walletCurrency);
       if (t.type === 'income') balance += amount;
       else balance -= amount;
     }

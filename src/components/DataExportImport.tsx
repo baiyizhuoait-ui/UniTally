@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
 import { Download, Upload, Calendar, ChevronDown, X, Check, FileText } from 'lucide-react';
@@ -106,7 +107,7 @@ export default function DataExportImport() {
     const dateRange = filterStartDate || filterEndDate 
       ? `_${filterStartDate || 'start'}_to_${filterEndDate || 'end'}`
       : '';
-    link.download = `transactions${dateRange}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `transactions${dateRange}_${toLocalDateStr(new Date())}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -403,8 +404,8 @@ export default function DataExportImport() {
                   onClick={() => {
                     const today = new Date();
                     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-                    setTempStartDate(startOfMonth.toISOString().split('T')[0]);
-                    setTempEndDate(today.toISOString().split('T')[0]);
+                    setTempStartDate(toLocalDateStr(startOfMonth));
+                    setTempEndDate(toLocalDateStr(today));
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
                 >
@@ -415,8 +416,8 @@ export default function DataExportImport() {
                     const today = new Date();
                     const startOfLastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
                     const endOfLastMonth = new Date(today.getFullYear(), today.getMonth(), 0);
-                    setTempStartDate(startOfLastMonth.toISOString().split('T')[0]);
-                    setTempEndDate(endOfLastMonth.toISOString().split('T')[0]);
+                    setTempStartDate(toLocalDateStr(startOfLastMonth));
+                    setTempEndDate(toLocalDateStr(endOfLastMonth));
                   }}
                   className="flex-1 py-2.5 rounded-xl bg-secondary text-foreground text-sm"
                 >

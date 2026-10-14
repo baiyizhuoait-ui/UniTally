@@ -22,6 +22,7 @@ import {
 import { bigramDice, findRelevantFeedback, diffPrefill } from '@/lib/aiFeedback';
 import { mapAiPrefill } from '@/lib/aiPrefill';
 import { isBillPaste } from '@/lib/pasteDetector';
+import { toLocalDateStr } from '@/lib/utils';
 import type { AiFeedback, AiPrefill, Wallet } from '@/types';
 
 // 固定"当前时间"：2026-10-05（周一）12:00 本地时间
@@ -363,6 +364,46 @@ describe('extractJson', () => {
     expect(extractJson('{"amount":9}')).toEqual({ amount: 9 });
     expect(extractJson('这不是 JSON')).toBeNull();
     expect(extractJson('{"amount":')).toBeNull();
+  });
+
+  // 数组场景（A4 批量分类根因：此前 indexOf('{') 会把数组截断成首对象）
+  it('场景7：JSON 数组完整提取（A4 批量分类输出形态）', () => {
+    const raw = '[{"i":1,"c":"food"},{"i":2,"c":"transport"},{"i":3,"c":"other"}]';
+    expect(extractJson(raw)).toEqual([
+      { i: 1, c: 'food' },
+      { i: 2, c: 'transport' },
+      { i: 3, c: 'other' },
+    ]);
+  });
+
+  it('场景8：前后噪声中的数组 + 数组内嵌对象 + 尾逗号修复', () => {
+    const raw = '好的，批量结果：[{"i":1,"c":"food"},{"i":2,"c":"shopping",}] 完毕';
+    expect(extractJson(raw)).toEqual([{ i: 1, c: 'food' }, { i: 2, c: 'shopping' }]);
+    // 字符串内的 ']' 不参与配平
+    expect(extractJson('["a]b","c"]')).toEqual(['a]b', 'c']);
+  });
+
+  it('场景9：对象优先于数组（首个 { 在 [ 之前时仍按对象配平）', () => {
+    expect(extractJson('{"items":[1,2]}')).toEqual({ items: [1, 2] });
+  });
+});
+
+// ---------- toLocalDateStr ----------
+
+describe('toLocalDateStr', () => {
+  it('本地日历日拼接（不走 UTC）', () => {
+    expect(toLocalDateStr(new Date(2026, 0, 1))).toBe('2026-01-01');
+    expect(toLocalDateStr(new Date(2026, 11, 31))).toBe('2026-12-31');
+  });
+
+  it('月/日补零', () => {
+    expect(toLocalDateStr(new Date(2026, 2, 5))).toBe('2026-03-05');
+  });
+
+  it('UTC 日期与本地日期不同时以本地为准（东八区 0:30 → 本地仍是当天）', () => {
+    // 本地 2026-01-01 00:30 构造：无论测试机时区如何，本地日历日恒为 2026-01-01
+    const d = new Date(2026, 0, 1, 0, 30);
+    expect(toLocalDateStr(d)).toBe('2026-01-01');
   });
 });
 

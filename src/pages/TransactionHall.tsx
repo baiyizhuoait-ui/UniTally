@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toLocalDateStr } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { getCurrencySymbol } from '@/lib/currencies';
 import { Trash2, X, ChevronDown, Wallet, CreditCard, ArrowRight, Filter } from 'lucide-react';
@@ -87,9 +88,9 @@ export default function TransactionHall() {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
     
-    if (dateStr === today.toISOString().split('T')[0]) {
+    if (dateStr === toLocalDateStr(today)) {
       return t.transactionHall.today;
-    } else if (dateStr === yesterday.toISOString().split('T')[0]) {
+    } else if (dateStr === toLocalDateStr(yesterday)) {
       return t.transactionHall.yesterday;
     } else {
       const month = date.getMonth() + 1;

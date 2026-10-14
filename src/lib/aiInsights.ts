@@ -453,7 +453,15 @@ export async function generateMonthlySummary(
   try {
     let raw: string;
     if (channel === 'local_ollama') {
-      raw = await callOllama(cfg, buildInsightLitePrompt(payload), OLLAMA_NUM_CTX_DEFAULT, TIMEOUT_LOCAL_MS, opts.signal);
+      const prompt = buildInsightLitePrompt(payload);
+      try {
+        raw = await callOllama(cfg, prompt, OLLAMA_NUM_CTX_DEFAULT, TIMEOUT_LOCAL_MS, opts.signal);
+      } catch (err) {
+        // 双协议兼容（与 aiParse 同策略）：非 Ollama 本地服务无 /api/chat → 400/404/405/422 改走 OpenAI 兼容端点
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!/^Ollama HTTP (400|404|405|422)\b/.test(msg)) throw err;
+        raw = await callOpenAiCompatible(cfg, '', prompt, TIMEOUT_LOCAL_MS, opts.signal);
+      }
     } else {
       const { system, user } = buildInsightCloudPrompt(payload);
       raw = await callOpenAiCompatible(cfg, system, user, TIMEOUT_CLOUD_MS, opts.signal);
@@ -497,7 +505,15 @@ export async function answerQuestion(
   try {
     let raw: string;
     if (channel === 'local_ollama') {
-      raw = await callOllama(cfg, buildQaLitePrompt(payload, opts.question), OLLAMA_NUM_CTX_DEFAULT, TIMEOUT_LOCAL_MS, opts.signal);
+      const prompt = buildQaLitePrompt(payload, opts.question);
+      try {
+        raw = await callOllama(cfg, prompt, OLLAMA_NUM_CTX_DEFAULT, TIMEOUT_LOCAL_MS, opts.signal);
+      } catch (err) {
+        // 双协议兼容（与 aiParse 同策略）：非 Ollama 本地服务无 /api/chat → 400/404/405/422 改走 OpenAI 兼容端点
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!/^Ollama HTTP (400|404|405|422)\b/.test(msg)) throw err;
+        raw = await callOpenAiCompatible(cfg, '', prompt, TIMEOUT_LOCAL_MS, opts.signal);
+      }
     } else {
       const { system, user } = buildQaCloudPrompt(payload, opts.question);
       raw = await callOpenAiCompatible(cfg, system, user, TIMEOUT_CLOUD_MS, opts.signal);

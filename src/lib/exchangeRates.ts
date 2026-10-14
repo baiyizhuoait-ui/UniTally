@@ -1,4 +1,5 @@
 import { STORAGE_KEYS, loadFromStorage, saveToStorage } from './storage';
+import { toLocalDateStr } from '@/lib/utils';
 import type { ExchangeRateCache } from '@/types';
 
 const API_BASE = 'https://open.er-api.com/v6';
@@ -92,7 +93,7 @@ export async function fetchHistoricalRates(from: string, to: string, days: numbe
     
     if (data.result !== 'success') throw new Error('API returned error');
     
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr(new Date());
     const rates = data.rates;
     const toRate = rates[to];
     
@@ -122,7 +123,7 @@ export function getHistoricalRate(from: string, to: string, date: string): numbe
   const d = new Date(date);
   for (let i = 1; i <= 5; i++) {
     d.setDate(d.getDate() - 1);
-    const fallbackDate = d.toISOString().split('T')[0];
+    const fallbackDate = toLocalDateStr(d);
     const fallbackRate = cache.historical[fallbackDate]?.[from]?.[to];
     if (fallbackRate) return fallbackRate;
   }

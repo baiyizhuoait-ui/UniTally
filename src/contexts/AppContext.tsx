@@ -148,19 +148,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const primaryCurrency = currencies[0] || 'CNY';
   const secondaryCurrency = currencies[1] || 'MYR';
 
-  const mergeWithDefaults = <T extends { id: string }>(existing: T[], defaults: T[]): T[] => {
+  // 缺失默认项补入；用户主动删除的默认分类（tombstone）不复活；自定义分类原样保留
+  const mergeWithDefaults = <T extends { id: string }>(existing: T[], defaults: T[], deletedIds: Set<string>): T[] => {
     const existingIds = new Set(existing.map(item => item.id));
-    const defaultIds = new Set(defaults.map(item => item.id));
-    
+
     const merged = [...existing];
-    
+
     for (const defaultItem of defaults) {
-      if (!existingIds.has(defaultItem.id)) {
+      if (!existingIds.has(defaultItem.id) && !deletedIds.has(defaultItem.id)) {
         merged.push(defaultItem);
       }
     }
-    
-    return merged.filter(item => defaultIds.has(item.id));
+
+    return merged;
   };
 
   useEffect(() => {
@@ -169,17 +169,22 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const userWallets = loadUserData<Wallet[]>(user.id, USER_DATA_KEYS.WALLETS, []);
       const userCategories = loadUserData<Category[]>(user.id, USER_DATA_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
       const userPlatforms = loadUserData<Platform[]>(user.id, USER_DATA_KEYS.PLATFORMS, DEFAULT_PLATFORMS);
+      const userBudgets = loadUserData<Budget[]>(user.id, USER_DATA_KEYS.BUDGETS, []);
+      const userSubscriptions = loadUserData<Subscription[]>(user.id, USER_DATA_KEYS.SUBSCRIPTIONS, []);
       const userAvatar = loadUserData<string | null>(user.id, USER_DATA_KEYS.AVATAR, null);
       const userSetupCompleted = loadUserData<boolean>(user.id, USER_DATA_KEYS.SETUP_COMPLETED, false);
       const userBookName = loadUserData<string>(user.id, USER_DATA_KEYS.BOOK_NAME, '');
-      
+
       setTransactions(userTransactions);
       setWallets(userWallets);
-      
-      const mergedCategories = mergeWithDefaults(userCategories, DEFAULT_CATEGORIES);
+
+      const deletedDefaultIds = new Set(loadUserData<string[]>(user.id, USER_DATA_KEYS.DELETED_DEFAULT_CATEGORIES, []));
+      const mergedCategories = mergeWithDefaults(userCategories, DEFAULT_CATEGORIES, deletedDefaultIds);
       setCategories(mergedCategories);
-      
+
       setPlatforms(userPlatforms);
+      setBudgets(userBudgets);
+      setSubscriptions(userSubscriptions);
       setAvatarState(userAvatar);
       setSetupCompletedState(userSetupCompleted);
       setBookNameState(userBookName);
@@ -188,6 +193,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setWallets([]);
       setCategories(DEFAULT_CATEGORIES);
       setPlatforms(DEFAULT_PLATFORMS);
+      setBudgets([]);
+      setSubscriptions([]);
       setAvatarState(null);
       setSetupCompletedState(false);
       setBookNameState('');
@@ -217,6 +224,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       saveUserData(user.id, USER_DATA_KEYS.PLATFORMS, platforms);
     }
   }, [platforms, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      saveUserData(user.id, USER_DATA_KEYS.BUDGETS, budgets);
+    }
+  }, [budgets, user?.id]);
+
+  useEffect(() => {
+    if (user?.id) {
+      saveUserData(user.id, USER_DATA_KEYS.SUBSCRIPTIONS, subscriptions);
+    }
+  }, [subscriptions, user?.id]);
 
   useEffect(() => { saveToStorage(STORAGE_KEYS.THEME, theme); }, [theme]);
   useEffect(() => { saveToStorage(STORAGE_KEYS.THEME_COLOR, themeColor); }, [themeColor]);
@@ -342,7 +361,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteCategory = useCallback((id: string) => {
     if (id === 'transfer') return;
     setCategories(prev => prev.filter(x => x.id !== id));
-  }, []);
+    // 删除默认分类记 tombstone：防止刷新后 mergeWithDefaults 把它复活（自定义分类无需记录）
+    if (DEFAULT_CATEGORIES.some(c => c.id === id) && user) {
+      const tombs = loadUserData<string[]>(user.id, USER_DATA_KEYS.DELETED_DEFAULT_CATEGORIES, []);
+      if (!tombs.includes(id)) {
+        saveUserData(user.id, USER_DATA_KEYS.DELETED_DEFAULT_CATEGORIES, [...tombs, id]);
+      }
+    }
+  }, [user]);
   const reorderCategories = useCallback((c: Category[]) => setCategories(c), []);
 
   const addPlatform = useCallback((p: Omit<Platform, 'id'>) => {
@@ -417,6 +443,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setWallets([]);
     setCategories(DEFAULT_CATEGORIES);
     setPlatforms(DEFAULT_PLATFORMS);
+    setBudgets([]);
+    setSubscriptions([]);
     setAvatarState(null);
   }, []);
 
@@ -456,6 +484,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setCategories(DEFAULT_CATEGORIES);
     if (user) {
       saveUserData(user.id, USER_DATA_KEYS.CATEGORIES, DEFAULT_CATEGORIES);
+      // 用户主动恢复默认 → 清除删除 tombstone，否则默认分类会被 tombstone 挡住
+      saveUserData(user.id, USER_DATA_KEYS.DELETED_DEFAULT_CATEGORIES, []);
     }
   }, [user]);
 

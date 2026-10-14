@@ -793,7 +793,8 @@ async function callOpenAiCompatible(
   user: string,
   timeoutMs: number,
 ): Promise<string> {
-  const url = `${normalizeEndpointLocal(config.baseUrl)}/chat/completions`;
+  // normalizeEndpointLocal 已拼好 /chat/completions 尾段，此处不得再追加（否则 .../v1/chat/completions/chat/completions 404）
+  const url = normalizeEndpointLocal(config.baseUrl);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${config.apiKey ?? ''}`,
@@ -844,6 +845,12 @@ async function callOllama(config: AiConfig, system: string, user: string, timeou
         options: { num_ctx: 4096, temperature: 0 },
       }),
     });
+    // 双协议兼容（与 aiParse 同策略）：LM Studio / llama.cpp / vLLM 等无 Ollama 原生
+    // /api/chat 端点 → 400/404/405/422 时改走 OpenAI 兼容 /v1/chat/completions
+    if (res.status === 400 || res.status === 404 || res.status === 405 || res.status === 422) {
+      clearTimeout(timer);
+      return await callOpenAiCompatible(config, system, user, timeoutMs);
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as { message?: { content?: string } };
     const content = data.message?.content ?? '';
